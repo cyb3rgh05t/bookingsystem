@@ -220,7 +220,7 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
                         ?>
                         Montag - Freitag: <?php echo $weekdayStart; ?> - <?php echo $weekdayEnd; ?> Uhr<br>
                         Samstag: <?php echo $saturdayStart; ?> - <?php echo $saturdayEnd; ?> Uhr<br>
-                        Sonntag: Geschlossen
+                        Sonntag: Geschlossen (Termin möglich nach Absprache)
                     </div>
 
                     <div class="time-slots" id="time-slots"

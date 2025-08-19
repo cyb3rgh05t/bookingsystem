@@ -180,7 +180,7 @@ $services = $db->fetchAll("SELECT * FROM services ORDER BY name");
                                             Bearbeiten
                                         </button>
 
-                                        <?php if ($service['id'] > 7): // Nur selbst erstellte Services löschen 
+                                        <?php if ($service['id'] > 0): // Nur selbst erstellte Services löschen 
                                         ?>
                                             <form method="POST" style="display: inline;" onsubmit="return confirm('Service wirklich löschen?');">
                                                 <input type="hidden" name="action" value="delete">

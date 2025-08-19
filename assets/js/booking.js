@@ -176,10 +176,12 @@ async function loadServices() {
                       service.background_image || "default.jpg"
                     }')"></div>
                     <div class="service-card-content">
-                        <h3>${service.name}</h3>
-                        <p style="font-size: 0.9rem; margin: 0.5rem 0;">${
-                          service.description || ""
-                        }</p>
+                        <div class="service-card-top">
+                            <h3>${service.name}</h3>
+                            <p class="service-card-description">${
+                              service.description || ""
+                            }</p>
+                        </div>
                         <div class="service-card-meta">
                             <span class="service-price">${parseFloat(
                               service.price
@@ -204,15 +206,33 @@ async function loadServices() {
 
 // Toggle service selection
 function toggleService(serviceId) {
+  // Ensure serviceId is a number for comparison
+  serviceId = parseInt(serviceId);
+
   const card = document.querySelector(`[data-service-id="${serviceId}"]`);
-  const service = window.servicesData.find((s) => s.id === serviceId);
+
+  // Make sure servicesData is loaded
+  if (!window.servicesData || !Array.isArray(window.servicesData)) {
+    console.error("Services data not loaded yet");
+    return;
+  }
+
+  // Find service and ensure ID comparison works with both strings and numbers
+  const service = window.servicesData.find((s) => parseInt(s.id) === serviceId);
+
+  if (!service) {
+    console.error("Service not found with ID:", serviceId);
+    return;
+  }
 
   if (card.classList.contains("selected")) {
+    // Remove service
     card.classList.remove("selected");
     bookingData.services = bookingData.services.filter(
-      (s) => s.id !== serviceId
+      (s) => parseInt(s.id) !== serviceId
     );
   } else {
+    // Add service
     card.classList.add("selected");
     bookingData.services.push(service);
   }
@@ -221,15 +241,40 @@ function toggleService(serviceId) {
 }
 
 // Update services summary
+// Update services summary - SAFER VERSION
 function updateServicesSummary() {
-  const totalDuration = bookingData.services.reduce(
-    (sum, s) => sum + parseInt(s.duration_minutes),
-    0
-  );
-  const subtotal = bookingData.services.reduce(
-    (sum, s) => sum + parseFloat(s.price),
-    0
-  );
+  // Ensure services array exists and has valid items
+  if (!bookingData.services || bookingData.services.length === 0) {
+    document.getElementById("total-duration").textContent = "0 Min.";
+    document.getElementById("subtotal").textContent = "0,00€";
+    bookingData.subtotal = 0;
+
+    // Hide minimum price warning if no services selected
+    const warning = document.getElementById("min-price-warning");
+    if (warning) {
+      warning.style.display = "none";
+    }
+    return;
+  }
+
+  // Calculate with safety checks
+  const totalDuration = bookingData.services.reduce((sum, s) => {
+    // Check if service exists and has duration_minutes
+    if (s && s.duration_minutes) {
+      return sum + parseInt(s.duration_minutes);
+    }
+    console.warn("Service missing duration_minutes:", s);
+    return sum;
+  }, 0);
+
+  const subtotal = bookingData.services.reduce((sum, s) => {
+    // Check if service exists and has price
+    if (s && s.price) {
+      return sum + parseFloat(s.price);
+    }
+    console.warn("Service missing price:", s);
+    return sum;
+  }, 0);
 
   document.getElementById(
     "total-duration"
@@ -258,24 +303,52 @@ function updateServicesSummary() {
   // Check minimum price for distance > 10km
   if (bookingData.distance > 10) {
     const warning = document.getElementById("min-price-warning");
-    if (subtotal < 59.9) {
-      warning.style.display = "block";
-      warning.innerHTML = `<strong>Hinweis:</strong> Bei einer Entfernung über 10km beträgt der Mindestbestellwert 59,90€. 
-                Aktuell: ${subtotal.toFixed(2)}€ - Es fehlen noch ${(
-        59.9 - subtotal
-      ).toFixed(2)}€`;
-    } else {
-      warning.style.display = "none";
+    if (warning) {
+      if (subtotal < 59.9) {
+        warning.style.display = "block";
+        warning.innerHTML = `<strong>Hinweis:</strong> Bei einer Entfernung über 10km beträgt der Mindestbestellwert 59,90€. 
+                  Aktuell: ${subtotal.toFixed(2)}€ - Es fehlen noch ${(
+          59.9 - subtotal
+        ).toFixed(2)}€`;
+      } else {
+        warning.style.display = "none";
+      }
     }
   }
 }
 
-// Calendar functions
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
+let blockedDaysData = { fullyBlocked: [], partiallyBlocked: [] };
 
 function initCalendar() {
-  renderCalendar();
+  loadBlockedDays().then(() => {
+    renderCalendar();
+  });
+}
+
+// Load blocked days for current month
+async function loadBlockedDays() {
+  const monthStr = `${currentYear}-${String(currentMonth + 1).padStart(
+    2,
+    "0"
+  )}`;
+
+  try {
+    const response = await fetch("api/check-blocked-days.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ month: monthStr }),
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      blockedDaysData = data;
+    }
+  } catch (error) {
+    console.error("Error loading blocked days:", error);
+    blockedDaysData = { fullyBlocked: [], partiallyBlocked: [] };
+  }
 }
 
 function renderCalendar() {
@@ -327,26 +400,42 @@ function renderCalendar() {
     const isPast = date < today;
     const isSunday = date.getDay() === 0;
     const isToday = date.getTime() === today.getTime();
+    const isFullyBlocked = blockedDaysData.fullyBlocked.includes(dateStr);
+    const isPartiallyBlocked =
+      blockedDaysData.partiallyBlocked.includes(dateStr);
 
     let classes = "calendar-day";
-    if (isPast || isSunday) classes += " disabled";
+    if (isPast || isSunday || isFullyBlocked) classes += " disabled";
     if (isToday) classes += " today";
     if (bookingData.date === dateStr) classes += " selected";
+    if (isPartiallyBlocked && !isFullyBlocked) classes += " partially-blocked";
 
     let title = "";
+    let indicator = "";
+
     if (isPast) {
       title = "Vergangenes Datum";
     } else if (isSunday) {
       title = "Sonntags geschlossen";
+    } else if (isFullyBlocked) {
+      title = "Dieser Tag ist komplett blockiert";
+      indicator =
+        '<span style="position: absolute; top: 2px; right: 2px; color: var(--clr-error); font-size: 0.7rem;">✖</span>';
+    } else if (isPartiallyBlocked) {
+      title = "Einige Zeiten sind an diesem Tag blockiert";
+      indicator =
+        '<span style="position: absolute; top: 2px; right: 2px; color: var(--clr-warning); font-size: 0.7rem;">⚠</span>';
     }
 
+    const isClickable = !isPast && !isSunday && !isFullyBlocked;
+
     html += `<div class="${classes}" 
-                      onclick="${
-                        !isPast && !isSunday ? `selectDate('${dateStr}')` : ""
-                      }"
+                      onclick="${isClickable ? `selectDate('${dateStr}')` : ""}"
                       data-date="${dateStr}"
-                      title="${title}">
+                      title="${title}"
+                      style="position: relative;">
                     ${day}
+                    ${indicator}
                  </div>`;
   }
 
@@ -370,8 +459,32 @@ function changeMonth(direction) {
     currentMonth = 0;
     currentYear++;
   }
-  renderCalendar();
+
+  // Load blocked days for new month before rendering
+  loadBlockedDays().then(() => {
+    renderCalendar();
+  });
 }
+
+// Add some CSS for partially blocked days
+const style = document.createElement("style");
+style.textContent = `
+  .calendar-day.partially-blocked {
+    background: rgba(255, 152, 0, 0.1);
+    border-color: var(--clr-warning);
+  }
+  
+  .calendar-day.partially-blocked:hover:not(.disabled) {
+    background: rgba(255, 152, 0, 0.2);
+  }
+  
+  .calendar-day.disabled {
+    background: rgba(255, 255, 255, 0.02);
+    cursor: not-allowed !important;
+    opacity: 0.3;
+  }
+`;
+document.head.appendChild(style);
 
 function selectDate(dateStr) {
   // Remove previous selection

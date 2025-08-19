@@ -109,7 +109,7 @@ try {
     $checkSettings = $db->query("SELECT COUNT(*) as count FROM settings")->fetch();
     if ($checkSettings['count'] == 0) {
         $db->exec("INSERT INTO settings (id, company_name, address, email, phone) 
-                   VALUES (1, 'Auto Service GmbH', 'Musterstraße 1, 12345 Musterstadt', 'info@autoservice.de', '0123-456789')");
+                   VALUES (1, 'MCS - Mobile Car Service', 'Hüllerstraße 16, 44649 Herne', 'ilyazcaneul90@gmail.com', '0173 3005064')");
     }
 
     // Standard-Admin erstellen (Passwort: admin123)
@@ -124,13 +124,22 @@ try {
     $checkServices = $db->query("SELECT COUNT(*) as count FROM services")->fetch();
     if ($checkServices['count'] == 0) {
         $services = [
-            ['Ölwechsel', 'Kompletter Ölwechsel inkl. Filter', 49.90, 30, 'oil-change.jpg'],
-            ['Reifenwechsel', 'Wechsel von Sommer- auf Winterreifen oder umgekehrt', 39.90, 45, 'tire-change.jpg'],
-            ['Bremsen-Check', 'Überprüfung der Bremsanlage', 29.90, 30, 'brake-check.jpg'],
-            ['Klimaanlagen-Service', 'Wartung und Desinfektion der Klimaanlage', 89.90, 60, 'ac-service.jpg'],
-            ['Batterie-Check', 'Überprüfung und ggf. Wechsel der Batterie', 19.90, 20, 'battery-check.jpg'],
-            ['Inspektion Klein', 'Kleine Inspektion nach Herstellervorgaben', 149.90, 90, 'inspection-small.jpg'],
-            ['Inspektion Groß', 'Große Inspektion nach Herstellervorgaben', 299.90, 120, 'inspection-large.jpg']
+
+            ['Sorglos-Paket', 'Check + Pflege in einem Termin: Dein Auto wird technisch geprüft und außen frisch gewaschen – perfekt, wenn du es einfach sorglos willst.', 119.00, 45, 'sorglos.jpg'],
+            ['Verkaufsklar-Paket', 'Auto verkaufen? Ich mache dein Fahrzeug sauber, fotografiere es und erstelle ein Profi-Inserat – so verkaufst du schneller und besser', 159.90, 90, 'verkaufsklar.jpg'],
+            ['Check & Wechsel-Paket', 'Der Saisonklassiker: Räderwechsel vor Ort plus ein Sicherheits-Check – alles in einem Termin.', 89.90, 60, 'check.jpg'],
+            ['Diagnose Paket', 'Dein Auto zeigt eine Warnlampe oder macht Probleme? Ich lese den Fehlerspeicher aus, prüfe die wichtigsten Punkte und erkläre dir klar, was wirklich los ist – damit du weißt, woran du bist.', 39.90, 30, 'verkaufsklar.jpg'],
+            ['Basis Check', 'Dein Auto zeigt eine Warnlampe oder macht Probleme? Ich lese den Fehlerspeicher aus, prüfe die wichtigsten Punkte und erkläre dir klar, was wirklich los ist – damit du weißt, woran du bist.', 59.90, 30, 'sorglos.jpg'],
+            ['Komfort Check', 'Der umfassende Check: Zusätzlich zur Basis-Prüfung lese ich Fehler aus, kontrolliere Bremsen, Batterie und Unterboden – perfekt, wenn du sicher unterwegs sein willst.', 79.90, 120, 'rader.jpg'],
+            ['Räderwechsel mobil', 'Ich komme zu dir, wechsel deine Räder direkt vor Ort und checke Bremsen & Luftdruck gleich mit – kein Werkstatttermin, kein Schleppen.', 39.90, 60, 'hilfe.jpg'],
+            ['Hilfe beim Fahrzeugkauf', 'Du willst ein Auto kaufen, bist dir aber unsicher? Ich prüfe das Auto gründlich und sage dir ehrlich, ob es den Preis wert ist.', 79.90, 60, 'wash.jpg'],
+            ['Hilfe beim Fahrzeugverkauf', 'Ich mache dein Auto verkaufsfertig: Check, Profi Fotos, Preis-Analyse und ein ansprechender Inserat Text.', 59.90, 60, 'check.jpg'],
+            ['Wash & Care Pakete Außenpflege Basic', 'Frischer Glanz: Handwäsche, Felgenreinigung, Trocknen.', 89.90, 60, 'washcare.jpg'],
+            ['Außen- & Innenpflege Plus', 'Innen & außen sauber: Handwäsche, Innenraumreinigung, Oberflächenpflege.', 149.90, 60, 'wash2.jpg'],
+            ['Außen- & Innenpflege Premium', 'Das volle Programm: intensive Pflege inkl. Versiegelung, Polster- & Kunststoffpflege.', 89.90, 60, 'wash2.jpg'],
+            ['Batterie-Service', '(zzgl. Batteriepreis) Batterie schwach? Ich teste, wechsle und programmiere sie – damit dein Auto sofort wieder startet.', 69.90, 60, 'batterie.jpg'],
+            ['Scheinwerferaufbereitung', 'Matte Scheinwerfer? Ich schleife, poliere und versiegel sie – für klare Sicht und frische Optik.', 69.90, 60, 'scheinwerfer.jpg'],
+            ['Ersatzteilbeschaffung', '+ Marge - Kein Lust auf Teile suchen? Ich besorge die passenden Ersatzteile und bringe sie dir – ohne Stress.', 14.90, 60, 'ersatz.jpg']
         ];
 
         $stmt = $db->prepare("INSERT INTO services (name, description, price, duration_minutes, background_image) 

@@ -201,7 +201,7 @@ h3 {
   backdrop-filter: blur(10px);
 }
 
-/* Service Cards - Minimalist Style */
+/* Service Cards - Einheitliches Layout für beide Bereiche */
 .service-card {
   position: relative;
   overflow: hidden;
@@ -213,7 +213,7 @@ h3 {
   height: 250px;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: space-between;
 }
 
 .service-card:hover {
@@ -252,6 +252,7 @@ h3 {
   background-size: cover;
   background-position: center;
   z-index: 0;
+  opacity: 0.3;
 }
 
 .service-card-bg::after {
@@ -263,9 +264,9 @@ h3 {
   bottom: 0;
   background: linear-gradient(
     to bottom,
-    transparent 0%,
-    rgba(0, 0, 0, 0.7) 60%,
-    rgba(0, 0, 0, 0.9) 100%
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(0, 0, 0, 0.8) 50%,
+    rgba(0, 0, 0, 0.95) 100%
   );
 }
 
@@ -274,18 +275,44 @@ h3 {
   z-index: 1;
   padding: 1.5rem;
   color: var(--clr-primary-a0);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Oberer Bereich - Titel und Beschreibung */
+.service-card-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .service-card h3 {
   font-size: 1.3rem;
-  margin-bottom: 0.5rem;
+  margin: 0;
+  font-weight: 500;
+  color: var(--clr-primary-a0);
+  line-height: 1.2;
 }
 
+.service-card-description {
+  font-size: 0.9rem;
+  color: var(--clr-primary-a20);
+  line-height: 1.4;
+  margin: 0;
+  flex: 1;
+}
+
+/* Unterer Bereich - Preis und Dauer IMMER unten */
 .service-card-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin-top: auto;
 }
 
 .service-price {
@@ -297,6 +324,22 @@ h3 {
 .service-duration {
   font-size: 0.9rem;
   color: var(--clr-primary-a30);
+  text-align: right;
+}
+
+/* Responsive Anpassungen */
+@media (max-width: 768px) {
+  .service-card {
+    height: 220px;
+  }
+
+  .service-card h3 {
+    font-size: 1.1rem;
+  }
+
+  .service-price {
+    font-size: 1.3rem;
+  }
 }
 
 /* Forms - Minimalist Style */
