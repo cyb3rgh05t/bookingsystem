@@ -18,6 +18,7 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/theme.css">
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/print.css">
 </head>
 
 <body>
@@ -277,36 +278,130 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
 
                 <!-- Step 6: Bestätigung -->
                 <div class="step-panel" data-step="6" style="display:none;">
-                    <div style="text-align: center; padding: 3rem 0;">
-                        <div style="font-size: 4rem; color: var(--clr-success); margin-bottom: 1rem;">✓</div>
-                        <h2 style="margin-bottom: 1rem;">Vielen Dank für Ihre Buchung!</h2>
-                        <p style="margin-bottom: 2rem;">Eine Bestätigungs-E-Mail wurde an Ihre E-Mail-Adresse gesendet.</p>
-
-                        <div class="card" style="max-width: 500px; margin: 0 auto; text-align: left;">
-                            <h3>Ihre Buchungsnummer:</h3>
-                            <p style="font-size: 1.5rem; font-weight: bold; color: var(--clr-info);" id="booking-number">#2025-0001</p>
-
-                            <div style="margin-top: 2rem;">
-                                <h4>Nächste Schritte:</h4>
-                                <ul style="margin-top: 1rem; padding-left: 1.5rem;">
-                                    <li>Überprüfen Sie Ihre E-Mail für die Bestätigung</li>
-                                    <li>Bezahlen Sie bequem per PayPal oder Kreditkarte</li>
-                                    <li>Wir kommen zum vereinbarten Termin zu Ihnen</li>
-                                </ul>
+                    <div id="print-area">
+                        <div class="print-container">
+                            <!-- Print Header (only visible in print) -->
+                            <div class="print-header" style="display: none;">
+                                <img src="assets/images/logo.png" alt="Logo" class="print-logo" onerror="this.style.display='none'">
+                                <div class="print-company"><?php echo htmlspecialchars($settings['company_name'] ?? 'Auto Service GmbH'); ?></div>
+                                <div style="font-size: 10pt; margin-top: 5mm;">
+                                    <?php echo htmlspecialchars($settings['address'] ?? ''); ?><br>
+                                    Tel: <?php echo htmlspecialchars($settings['phone'] ?? ''); ?> |
+                                    E-Mail: <?php echo htmlspecialchars($settings['email'] ?? ''); ?>
+                                </div>
                             </div>
 
-                            <div style="margin-top: 2rem; display: flex; gap: 1rem;">
-                                <button class="btn btn-primary" onclick="window.print()">
-                                    Drucken
-                                </button>
-                                <button class="btn btn-success" onclick="processPayment()">
-                                    Jetzt bezahlen
-                                </button>
-                            </div>
-                        </div>
+                            <!-- Success Message -->
+                            <div class="confirmation-container" style="max-width: 600px; margin: 0 auto; text-align: center;">
+                                <div class="no-print" style="padding: 2rem 0;">
+                                    <div style="font-size: 4rem; color: var(--clr-success); margin-bottom: 1rem;">✓</div>
+                                    <h2 style="margin-bottom: 1rem; font-weight: 400; letter-spacing: 0.05em;">Vielen Dank für Ihre Buchung!</h2>
+                                    <p style="margin-bottom: 2rem; color: var(--clr-primary-a40);">Eine Bestätigungs-E-Mail wurde an Ihre E-Mail-Adresse gesendet.</p>
+                                </div>
 
-                        <div style="margin-top: 3rem;">
-                            <a href="index.php" class="btn">Neue Buchung</a>
+                                <!-- Printable Title -->
+                                <div class="print-title" style="display: none;">Terminbestätigung</div>
+
+                                <!-- Booking Confirmation Card -->
+                                <div class="confirmation-card" style="background: var(--clr-surface-a10); border: 1px solid var(--clr-surface-a30); border-radius: var(--radius-xs); padding: 2rem; margin-bottom: 2rem; text-align: left;">
+
+                                    <!-- Booking Number -->
+                                    <div class="booking-number-section" style="text-align: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--clr-surface-a30);">
+                                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--clr-primary-a40); margin-bottom: 0.5rem;">Buchungsnummer</div>
+                                        <div id="booking-number" style="font-size: 1.75rem; font-weight: 500; color: var(--clr-info); letter-spacing: 0.05em;">#2025-0001</div>
+                                    </div>
+
+                                    <!-- Customer Details -->
+                                    <div class="detail-section" style="margin-bottom: 1.5rem;">
+                                        <h4 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; color: var(--clr-primary-a40);">Kundendaten</h4>
+                                        <div id="confirmation-customer-details" style="font-size: 0.95rem; line-height: 1.8;">
+                                            <!-- Will be filled by JavaScript -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Vehicle Details -->
+                                    <div class="detail-section" style="margin-bottom: 1.5rem;">
+                                        <h4 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; color: var(--clr-primary-a40);">Fahrzeugdaten</h4>
+                                        <div id="confirmation-vehicle-details" style="font-size: 0.95rem; line-height: 1.8;">
+                                            <!-- Will be filled by JavaScript -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Appointment Details -->
+                                    <div class="detail-section" style="margin-bottom: 1.5rem;">
+                                        <h4 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; color: var(--clr-primary-a40);">Termindetails</h4>
+                                        <div id="confirmation-appointment-details" style="font-size: 0.95rem; line-height: 1.8;">
+                                            <!-- Will be filled by JavaScript -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Services -->
+                                    <div class="detail-section" style="margin-bottom: 1.5rem;">
+                                        <h4 style="font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1rem; color: var(--clr-primary-a40);">Gebuchte Services</h4>
+                                        <div id="confirmation-services" style="font-size: 0.95rem;">
+                                            <!-- Will be filled by JavaScript -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Total -->
+                                    <div style="background: var(--clr-surface-a20); padding: 1.5rem; border-radius: var(--radius-xs); text-align: center; margin-top: 2rem;">
+                                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--clr-primary-a40); margin-bottom: 0.5rem;">Gesamtbetrag</div>
+                                        <div id="confirmation-total" style="font-size: 2rem; font-weight: 500; color: var(--clr-primary-a0);">0,00€</div>
+                                        <div style="font-size: 0.75rem; color: var(--clr-primary-a40); margin-top: 0.5rem;">
+                                            Zahlbar per PayPal oder Kreditkarte
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Hidden print elements -->
+                                <div style="display: none;">
+                                    <div id="print-customer-details"></div>
+                                    <div id="print-vehicle-details"></div>
+                                    <div id="print-appointment-details"></div>
+                                    <table id="print-services-table">
+                                        <tbody id="print-services-body"></tbody>
+                                    </table>
+                                    <div id="print-total-amount"></div>
+                                    <div id="print-payment-info"></div>
+                                    <div id="print-date"></div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="no-print" style="margin-bottom: 2rem;">
+                                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                                        <button class="btn btn-primary" onclick="printConfirmation()">
+                                            📄 Drucken
+                                        </button>
+                                        <button class="btn btn-primary" onclick="downloadPDF()">
+                                            📥 Als PDF
+                                        </button>
+                                        <button class="btn btn-success" onclick="processPayment()">
+                                            💳 Jetzt bezahlen
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Next Steps -->
+                                <div class="no-print card" style="background: var(--clr-surface-a10); border: 1px solid var(--clr-surface-a30); padding: 1.5rem; margin-bottom: 2rem;">
+                                    <h4 style="margin-bottom: 1rem; font-size: 1rem;">Nächste Schritte:</h4>
+                                    <ul style="margin: 0; padding-left: 1.5rem; text-align: left; font-size: 0.9rem; line-height: 1.8;">
+                                        <li>Überprüfen Sie Ihre E-Mail für die Bestätigung</li>
+                                        <li>Bezahlen Sie bequem per PayPal oder Kreditkarte</li>
+                                        <li>Wir kommen zum vereinbarten Termin zu Ihnen</li>
+                                    </ul>
+                                </div>
+
+                                <!-- Footer -->
+                                <div class="print-footer" style="display: none;">
+                                    <p>Diese Terminbestätigung wurde automatisch erstellt und ist ohne Unterschrift gültig.</p>
+                                    <p>Druckdatum: <span id="print-date-footer"></span></p>
+                                </div>
+
+                                <!-- New Booking Button -->
+                                <div class="no-print" style="margin-top: 2rem;">
+                                    <a href="index.php" class="btn" style="text-transform: uppercase; letter-spacing: 0.1em;">↻ Neue Buchung</a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

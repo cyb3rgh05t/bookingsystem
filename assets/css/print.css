@@ -1,0 +1,183 @@
+@media print {
+  /* Hide everything except print area */
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Reset backgrounds for print */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Print specific styles */
+  .print-container {
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 20mm;
+    font-family: "Space Grotesk", "Arial", sans-serif;
+  }
+
+  .print-header {
+    text-align: center;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10mm;
+    margin-bottom: 10mm;
+  }
+
+  .print-logo {
+    height: 30mm;
+    margin-bottom: 5mm;
+  }
+
+  .print-company {
+    font-size: 18pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .print-title {
+    font-size: 24pt;
+    margin: 10mm 0;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .print-booking-number {
+    text-align: center;
+    font-size: 16pt;
+    margin: 10mm 0;
+    padding: 5mm;
+    border: 2px solid #000;
+  }
+
+  .print-section {
+    margin: 10mm 0;
+    page-break-inside: avoid;
+  }
+
+  .print-section h3 {
+    font-size: 14pt;
+    border-bottom: 1px solid #000;
+    padding-bottom: 2mm;
+    margin-bottom: 5mm;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .print-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 2mm;
+    margin: 5mm 0;
+  }
+
+  .print-label {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 10pt;
+  }
+
+  .print-value {
+    font-size: 11pt;
+  }
+
+  .print-services {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 5mm 0;
+  }
+
+  .print-services th {
+    border-bottom: 2px solid #000;
+    padding: 3mm;
+    text-align: left;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 10pt;
+  }
+
+  .print-services td {
+    border-bottom: 1px solid #ccc;
+    padding: 3mm;
+    font-size: 11pt;
+  }
+
+  .print-total {
+    margin-top: 10mm;
+    padding: 5mm;
+    border: 2px solid #000;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+
+  .print-total-label {
+    font-size: 14pt;
+    text-transform: uppercase;
+    margin-bottom: 3mm;
+  }
+
+  .print-total-amount {
+    font-size: 24pt;
+    font-weight: bold;
+  }
+
+  .print-footer {
+    margin-top: 15mm;
+    padding-top: 5mm;
+    border-top: 1px solid #000;
+    text-align: center;
+    font-size: 9pt;
+  }
+
+  .print-qr {
+    width: 30mm;
+    height: 30mm;
+    margin: 5mm auto;
+    border: 1px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8pt;
+    color: #666;
+  }
+
+  /* Hide non-print elements */
+  .no-print,
+  .btn,
+  .header,
+  .booking-steps,
+  button {
+    display: none !important;
+  }
+
+  /* Ensure black text */
+  * {
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-after: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+}

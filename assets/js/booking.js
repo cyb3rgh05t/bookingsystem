@@ -839,9 +839,13 @@ async function confirmBooking() {
       document.querySelector(`.step-panel[data-step="6"]`).style.display =
         "block";
 
+      // Set booking number
       document.getElementById(
         "booking-number"
       ).textContent = `#${result.bookingNumber}`;
+
+      // Fill print details
+      fillPrintDetails(result.bookingNumber);
 
       // Scroll to top
       window.scrollTo(0, 0);
@@ -852,6 +856,248 @@ async function confirmBooking() {
     console.error("Error confirming booking:", error);
     alert("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.");
   }
+}
+
+// Fill print details for confirmation page
+function fillPrintDetails(bookingNumber) {
+  // Format data for screen display
+  const formatLabel = (label) =>
+    `<span style="color: var(--clr-primary-a40); font-size: 0.85rem;">${label}:</span>`;
+
+  // Customer Details for screen
+  const customerScreenHtml = `
+        ${formatLabel("Name")}<br>
+        <strong>${bookingData.customer.first_name} ${
+    bookingData.customer.last_name
+  }</strong><br><br>
+        ${formatLabel("E-Mail")}<br>
+        ${bookingData.customer.email}<br><br>
+        ${formatLabel("Telefon")}<br>
+        ${bookingData.customer.phone}<br><br>
+        ${formatLabel("Adresse")}<br>
+        ${bookingData.customer.address}
+    `;
+  document.getElementById("confirmation-customer-details").innerHTML =
+    customerScreenHtml;
+
+  // Vehicle Details for screen
+  const vehicleScreenHtml = `
+        ${formatLabel("Marke")}<br>
+        <strong>${bookingData.customer.car_brand || "-"}</strong><br><br>
+        ${formatLabel("Modell")}<br>
+        ${bookingData.customer.car_model || "-"}<br><br>
+        ${formatLabel("Baujahr")}<br>
+        ${bookingData.customer.car_year || "-"}<br><br>
+        ${formatLabel("Kennzeichen")}<br>
+        <strong style="font-size: 1.1em; color: var(--clr-info);">${
+          bookingData.customer.license_plate || "-"
+        }</strong>
+    `;
+  document.getElementById("confirmation-vehicle-details").innerHTML =
+    vehicleScreenHtml;
+
+  // Appointment Details for screen
+  const dateParts = bookingData.date.split("-");
+  const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+  const dateStr = dateObj.toLocaleDateString("de-DE", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const totalDuration = bookingData.services.reduce(
+    (sum, s) => sum + parseInt(s.duration_minutes),
+    0
+  );
+
+  const appointmentScreenHtml = `
+        ${formatLabel("Datum")}<br>
+        <strong>${dateStr}</strong><br><br>
+        ${formatLabel("Uhrzeit")}<br>
+        <strong>${bookingData.time} Uhr</strong><br><br>
+        ${formatLabel("Gesamtdauer")}<br>
+        ${totalDuration} Minuten<br><br>
+        ${formatLabel("Entfernung")}<br>
+        ${bookingData.distance.toFixed(1)} km
+    `;
+  document.getElementById("confirmation-appointment-details").innerHTML =
+    appointmentScreenHtml;
+
+  // Services for screen
+  let servicesScreenHtml =
+    '<table style="width: 100%; border-collapse: collapse;">';
+  servicesScreenHtml +=
+    '<thead><tr style="border-bottom: 1px solid var(--clr-surface-a30);">';
+  servicesScreenHtml +=
+    '<th style="padding: 0.5rem 0; text-align: left; font-size: 0.85rem; color: var(--clr-primary-a40);">Service</th>';
+  servicesScreenHtml +=
+    '<th style="padding: 0.5rem 0; text-align: right; font-size: 0.85rem; color: var(--clr-primary-a40);">Dauer</th>';
+  servicesScreenHtml +=
+    '<th style="padding: 0.5rem 0; text-align: right; font-size: 0.85rem; color: var(--clr-primary-a40);">Preis</th>';
+  servicesScreenHtml += "</tr></thead><tbody>";
+
+  bookingData.services.forEach((service) => {
+    servicesScreenHtml += `
+            <tr style="border-bottom: 1px solid var(--clr-surface-a20);">
+                <td style="padding: 0.75rem 0;">${service.name}</td>
+                <td style="padding: 0.75rem 0; text-align: right;">${
+                  service.duration_minutes
+                } Min.</td>
+                <td style="padding: 0.75rem 0; text-align: right;">${parseFloat(
+                  service.price
+                ).toFixed(2)}€</td>
+            </tr>
+        `;
+  });
+
+  servicesScreenHtml += `
+        <tr style="border-top: 1px solid var(--clr-surface-a30);">
+            <td colspan="2" style="padding: 0.75rem 0;"><strong>Zwischensumme:</strong></td>
+            <td style="padding: 0.75rem 0; text-align: right;"><strong>${bookingData.subtotal.toFixed(
+              2
+            )}€</strong></td>
+        </tr>
+    `;
+
+  if (bookingData.travelCost > 0) {
+    servicesScreenHtml += `
+            <tr>
+                <td colspan="2" style="padding: 0.75rem 0;">Anfahrtskosten (${bookingData.distance.toFixed(
+                  1
+                )} km):</td>
+                <td style="padding: 0.75rem 0; text-align: right;">${bookingData.travelCost.toFixed(
+                  2
+                )}€</td>
+            </tr>
+        `;
+  }
+
+  servicesScreenHtml += "</tbody></table>";
+  document.getElementById("confirmation-services").innerHTML =
+    servicesScreenHtml;
+
+  // Total Amount for screen
+  document.getElementById(
+    "confirmation-total"
+  ).textContent = `${bookingData.total.toFixed(2)}€`;
+
+  // Now fill print details (hidden elements for printing)
+  const customerPrintHtml = `
+        <div class="print-label">Name:</div>
+        <div class="print-value">${bookingData.customer.first_name} ${bookingData.customer.last_name}</div>
+        <div class="print-label">E-Mail:</div>
+        <div class="print-value">${bookingData.customer.email}</div>
+        <div class="print-label">Telefon:</div>
+        <div class="print-value">${bookingData.customer.phone}</div>
+        <div class="print-label">Adresse:</div>
+        <div class="print-value">${bookingData.customer.address}</div>
+    `;
+  if (document.getElementById("print-customer-details")) {
+    document.getElementById("print-customer-details").innerHTML =
+      customerPrintHtml;
+  }
+
+  // Vehicle Details for print
+  const vehiclePrintHtml = `
+        <div class="print-label">Marke:</div>
+        <div class="print-value">${bookingData.customer.car_brand || "-"}</div>
+        <div class="print-label">Modell:</div>
+        <div class="print-value">${bookingData.customer.car_model || "-"}</div>
+        <div class="print-label">Baujahr:</div>
+        <div class="print-value">${bookingData.customer.car_year || "-"}</div>
+        <div class="print-label">Kennzeichen:</div>
+        <div class="print-value" style="font-weight: bold; font-size: 1.1em;">${
+          bookingData.customer.license_plate || "-"
+        }</div>
+    `;
+  if (document.getElementById("print-vehicle-details")) {
+    document.getElementById("print-vehicle-details").innerHTML =
+      vehiclePrintHtml;
+  }
+
+  // Services for print
+  let servicesPrintHtml = "";
+  bookingData.services.forEach((service) => {
+    servicesPrintHtml += `
+            <tr>
+                <td>${service.name}</td>
+                <td style="text-align: right;">${
+                  service.duration_minutes
+                } Min.</td>
+                <td style="text-align: right;">${parseFloat(
+                  service.price
+                ).toFixed(2)}€</td>
+            </tr>
+        `;
+  });
+
+  servicesPrintHtml += `
+        <tr style="border-top: 2px solid #000;">
+            <td colspan="2"><strong>Zwischensumme:</strong></td>
+            <td style="text-align: right;"><strong>${bookingData.subtotal.toFixed(
+              2
+            )}€</strong></td>
+        </tr>
+    `;
+
+  if (bookingData.travelCost > 0) {
+    servicesPrintHtml += `
+            <tr>
+                <td colspan="2">Anfahrtskosten (${bookingData.distance.toFixed(
+                  1
+                )} km):</td>
+                <td style="text-align: right;">${bookingData.travelCost.toFixed(
+                  2
+                )}€</td>
+            </tr>
+        `;
+  }
+
+  if (document.getElementById("print-services-body")) {
+    document.getElementById("print-services-body").innerHTML =
+      servicesPrintHtml;
+  }
+
+  // Total for print
+  if (document.getElementById("print-total-amount")) {
+    document.getElementById(
+      "print-total-amount"
+    ).textContent = `${bookingData.total.toFixed(2)}€`;
+  }
+
+  // Set print dates
+  const currentDate = new Date().toLocaleDateString("de-DE");
+  if (document.getElementById("print-date")) {
+    document.getElementById("print-date").textContent = currentDate;
+  }
+  if (document.getElementById("print-date-footer")) {
+    document.getElementById("print-date-footer").textContent = currentDate;
+  }
+}
+
+// Print confirmation
+function printConfirmation() {
+  // Show print elements
+  const printElements = document.querySelectorAll(
+    ".print-header, .print-title, .print-footer"
+  );
+  printElements.forEach((el) => (el.style.display = "block"));
+
+  // Trigger print
+  window.print();
+
+  // Hide print elements again after a delay
+  setTimeout(() => {
+    printElements.forEach((el) => (el.style.display = "none"));
+  }, 500);
+}
+
+// Download as PDF (placeholder - would need server-side implementation)
+function downloadPDF() {
+  alert(
+    'PDF-Download wird vorbereitet...\n\nHinweis: Verwenden Sie alternativ "Drucken" und wählen Sie "Als PDF speichern" im Druckdialog.'
+  );
+  printConfirmation();
 }
 
 // Process payment
