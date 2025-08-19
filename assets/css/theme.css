@@ -1,0 +1,48 @@
+:root {
+  /* Base colors */
+  --clr-dark-a0: #000000;
+  --clr-light-a0: #ffffff;
+
+  /* Theme primary colors */
+  --clr-primary-a0: #ffffff;
+  --clr-primary-a10: #f5f5f5;
+  --clr-primary-a20: #e8e8e8;
+  --clr-primary-a30: #d4d4d4;
+  --clr-primary-a40: #b8b8b8;
+  --clr-primary-a50: #9a9a9a;
+
+  /* Theme surface colors */
+  --clr-surface-a0: #000000;
+  --clr-surface-a10: #1e1e1e;
+  --clr-surface-a20: #353535;
+  --clr-surface-a30: #4e4e4e;
+  --clr-surface-a40: #696969;
+  --clr-surface-a50: #858585;
+
+  /* Theme tonal surface colors - mit Transparenz für Overlays */
+  --clr-surface-tonal-a0: rgba(27, 27, 27, 0.95);
+  --clr-surface-tonal-a10: rgba(48, 48, 48, 0.95);
+  --clr-surface-tonal-a20: rgba(70, 70, 70, 0.95);
+  --clr-surface-tonal-a30: rgba(94, 94, 94, 0.95);
+  --clr-surface-tonal-a40: rgba(119, 119, 119, 0.95);
+  --clr-surface-tonal-a50: rgba(144, 144, 144, 0.95);
+
+  /* Semantic colors */
+  --clr-success: #4caf50;
+  --clr-warning: #ff9800;
+  --clr-error: #f44336;
+  --clr-info: #2196f3;
+
+  /* Border radius - mehr eckig */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6);
+}

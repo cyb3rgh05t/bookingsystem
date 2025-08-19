@@ -1,0 +1,861 @@
+// assets/js/booking.js - FIXED VERSION
+
+let currentStep = 1;
+let bookingData = {
+  customer: {},
+  services: [],
+  date: null,
+  time: null,
+  distance: 0,
+  travelCost: 0,
+  subtotal: 0,
+  total: 0,
+};
+
+// Initialize on page load
+document.addEventListener("DOMContentLoaded", function () {
+  loadServices();
+  initCalendar();
+  initAddressAutocomplete();
+});
+
+// Manual distance calculation button
+function calculateDistanceFromInput() {
+  const addressInput = document.getElementById("address");
+  if (addressInput && addressInput.value.trim()) {
+    calculateDistance(addressInput.value.trim());
+  } else {
+    const distanceInfo = document.getElementById("distance-info");
+    const distanceText = document.getElementById("distance-text");
+    distanceText.innerHTML =
+      "<strong>Bitte geben Sie eine Adresse ein</strong>";
+    distanceInfo.className = "alert alert-warning";
+    distanceInfo.style.display = "block";
+  }
+}
+
+// Google Maps Address Autocomplete
+function initAddressAutocomplete() {
+  const addressInput = document.getElementById("address");
+  if (!addressInput) return;
+
+  // Check if Google Maps is available
+  if (typeof google !== "undefined" && google.maps) {
+    const autocomplete = new google.maps.places.Autocomplete(addressInput, {
+      types: ["address"],
+      componentRestrictions: { country: "de" },
+    });
+
+    autocomplete.addListener("place_changed", function () {
+      const place = autocomplete.getPlace();
+      if (place.geometry) {
+        calculateDistance(place.formatted_address);
+      }
+    });
+  }
+
+  // Also calculate distance when user leaves the address field (for manual entry)
+  addressInput.addEventListener("blur", function () {
+    if (
+      this.value.trim() &&
+      (!bookingData.distance || bookingData.distance === 0)
+    ) {
+      calculateDistance(this.value.trim());
+    }
+  });
+
+  // Add event listener for Enter key
+  addressInput.addEventListener("keypress", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (this.value.trim()) {
+        calculateDistance(this.value.trim());
+      }
+    }
+  });
+}
+
+// Calculate distance from company to customer
+async function calculateDistance(customerAddress) {
+  try {
+    // Show loading state
+    const distanceInfo = document.getElementById("distance-info");
+    const distanceText = document.getElementById("distance-text");
+    distanceInfo.className = "alert alert-info";
+    distanceText.innerHTML = "Entfernung wird berechnet...";
+    distanceInfo.style.display = "block";
+
+    const response = await fetch("api/calculate-distance.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: customerAddress }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      bookingData.distance = data.distance;
+      bookingData.travelCost = data.travelCost;
+
+      let infoHtml = `<strong>Entfernung: ${data.distance.toFixed(
+        1
+      )} km</strong>`;
+
+      // Show if using Google Maps or demo mode
+      if (data.usingGoogleMaps) {
+        infoHtml += ` <small style="color: var(--clr-success);">(✓ Google Maps)</small>`;
+        if (data.duration) {
+          infoHtml += `<br><small>Fahrtzeit: ca. ${data.duration} Minuten</small>`;
+        }
+      } else if (data.message) {
+        infoHtml += ` <small style="color: var(--clr-warning);">(Demo-Modus)</small>`;
+      }
+
+      if (data.distance > 35) {
+        distanceText.innerHTML =
+          infoHtml +
+          `<br>
+                    <strong style="color: var(--clr-error);">Leider außerhalb unseres Servicegebiets (max. 35km)</strong>`;
+        distanceInfo.className = "alert alert-error";
+        document.querySelector('[onclick="nextStep()"]').disabled = true;
+      } else if (data.distance > 10) {
+        distanceText.innerHTML =
+          infoHtml +
+          `<br>
+                    Anfahrtskosten: <strong>${data.travelCost.toFixed(
+                      2
+                    )}€</strong><br>
+                    Mindestbestellwert: <strong>59,90€</strong>`;
+        distanceInfo.className = "alert alert-warning";
+        document.querySelector('[onclick="nextStep()"]').disabled = false;
+      } else {
+        distanceText.innerHTML =
+          infoHtml +
+          `<br>
+                    <strong style="color: var(--clr-success);">Kostenlose Anfahrt!</strong>`;
+        distanceInfo.className = "alert alert-success";
+        document.querySelector('[onclick="nextStep()"]').disabled = false;
+      }
+    } else {
+      // Error occurred
+      distanceText.innerHTML = `<strong>Fehler:</strong> ${
+        data.error || "Entfernung konnte nicht berechnet werden"
+      }`;
+      distanceInfo.className = "alert alert-error";
+      bookingData.distance = 0;
+      document.querySelector('[onclick="nextStep()"]').disabled = true;
+    }
+
+    distanceInfo.style.display = "block";
+  } catch (error) {
+    console.error("Error calculating distance:", error);
+    const distanceInfo = document.getElementById("distance-info");
+    const distanceText = document.getElementById("distance-text");
+    distanceText.innerHTML =
+      "<strong>Fehler:</strong> Verbindung zum Server fehlgeschlagen";
+    distanceInfo.className = "alert alert-error";
+    distanceInfo.style.display = "block";
+  }
+}
+
+// Load services
+async function loadServices() {
+  try {
+    const response = await fetch("api/get-services.php");
+    const services = await response.json();
+
+    const grid = document.getElementById("services-grid");
+    if (grid) {
+      grid.innerHTML = services
+        .map(
+          (service) => `
+                <div class="service-card" onclick="toggleService(${
+                  service.id
+                })" data-service-id="${service.id}">
+                    <div class="service-card-bg" style="background-image: url('assets/images/services/${
+                      service.background_image || "default.jpg"
+                    }')"></div>
+                    <div class="service-card-content">
+                        <h3>${service.name}</h3>
+                        <p style="font-size: 0.9rem; margin: 0.5rem 0;">${
+                          service.description || ""
+                        }</p>
+                        <div class="service-card-meta">
+                            <span class="service-price">${parseFloat(
+                              service.price
+                            ).toFixed(2)}€</span>
+                            <span class="service-duration">${
+                              service.duration_minutes
+                            } Min.</span>
+                        </div>
+                    </div>
+                </div>
+            `
+        )
+        .join("");
+
+      // Store services data globally
+      window.servicesData = services;
+    }
+  } catch (error) {
+    console.error("Error loading services:", error);
+  }
+}
+
+// Toggle service selection
+function toggleService(serviceId) {
+  const card = document.querySelector(`[data-service-id="${serviceId}"]`);
+  const service = window.servicesData.find((s) => s.id === serviceId);
+
+  if (card.classList.contains("selected")) {
+    card.classList.remove("selected");
+    bookingData.services = bookingData.services.filter(
+      (s) => s.id !== serviceId
+    );
+  } else {
+    card.classList.add("selected");
+    bookingData.services.push(service);
+  }
+
+  updateServicesSummary();
+}
+
+// Update services summary
+function updateServicesSummary() {
+  const totalDuration = bookingData.services.reduce(
+    (sum, s) => sum + parseInt(s.duration_minutes),
+    0
+  );
+  const subtotal = bookingData.services.reduce(
+    (sum, s) => sum + parseFloat(s.price),
+    0
+  );
+
+  document.getElementById(
+    "total-duration"
+  ).textContent = `${totalDuration} Min.`;
+  document.getElementById("subtotal").textContent = `${subtotal.toFixed(2)}€`;
+
+  bookingData.subtotal = subtotal;
+
+  // Reset time selection if duration changed (services were added/removed)
+  if (bookingData.time) {
+    // Clear time selection as available slots might have changed
+    bookingData.time = null;
+    const timeSlots = document.querySelectorAll(".time-slot.selected");
+    timeSlots.forEach((slot) => slot.classList.remove("selected"));
+
+    // Show info message if we're on the time selection step
+    if (currentStep === 4) {
+      const container = document.getElementById("time-slots");
+      if (container) {
+        container.innerHTML =
+          '<p style="text-align: center; color: var(--clr-warning);">Services wurden geändert. Bitte Datum erneut auswählen.</p>';
+      }
+    }
+  }
+
+  // Check minimum price for distance > 10km
+  if (bookingData.distance > 10) {
+    const warning = document.getElementById("min-price-warning");
+    if (subtotal < 59.9) {
+      warning.style.display = "block";
+      warning.innerHTML = `<strong>Hinweis:</strong> Bei einer Entfernung über 10km beträgt der Mindestbestellwert 59,90€. 
+                Aktuell: ${subtotal.toFixed(2)}€ - Es fehlen noch ${(
+        59.9 - subtotal
+      ).toFixed(2)}€`;
+    } else {
+      warning.style.display = "none";
+    }
+  }
+}
+
+// Calendar functions
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+
+function initCalendar() {
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const monthNames = [
+    "Januar",
+    "Februar",
+    "März",
+    "April",
+    "Mai",
+    "Juni",
+    "Juli",
+    "August",
+    "September",
+    "Oktober",
+    "November",
+    "Dezember",
+  ];
+  const dayNames = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+  document.getElementById(
+    "calendar-month"
+  ).textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let html = dayNames
+    .map(
+      (day) =>
+        `<div style="font-weight: bold; text-align: center; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--clr-primary-a40);">${day}</div>`
+    )
+    .join("");
+
+  // Empty cells before first day
+  for (let i = 0; i < firstDay; i++) {
+    html += "<div></div>";
+  }
+
+  // Days of month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(currentYear, currentMonth, day);
+    date.setHours(0, 0, 0, 0);
+
+    // Format date as YYYY-MM-DD for consistency
+    const dateStr = formatDateForDB(date);
+
+    const isPast = date < today;
+    const isSunday = date.getDay() === 0;
+    const isToday = date.getTime() === today.getTime();
+
+    let classes = "calendar-day";
+    if (isPast || isSunday) classes += " disabled";
+    if (isToday) classes += " today";
+    if (bookingData.date === dateStr) classes += " selected";
+
+    let title = "";
+    if (isPast) {
+      title = "Vergangenes Datum";
+    } else if (isSunday) {
+      title = "Sonntags geschlossen";
+    }
+
+    html += `<div class="${classes}" 
+                      onclick="${
+                        !isPast && !isSunday ? `selectDate('${dateStr}')` : ""
+                      }"
+                      data-date="${dateStr}"
+                      title="${title}">
+                    ${day}
+                 </div>`;
+  }
+
+  document.getElementById("calendar-grid").innerHTML = html;
+}
+
+// Format date for database (YYYY-MM-DD)
+function formatDateForDB(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function changeMonth(direction) {
+  currentMonth += direction;
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  } else if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  renderCalendar();
+}
+
+function selectDate(dateStr) {
+  // Remove previous selection
+  document.querySelectorAll(".calendar-day.selected").forEach((el) => {
+    el.classList.remove("selected");
+  });
+
+  // Add selection
+  const dayElement = document.querySelector(`[data-date="${dateStr}"]`);
+  if (dayElement) {
+    dayElement.classList.add("selected");
+  }
+
+  bookingData.date = dateStr;
+
+  // Enable continue button
+  document.getElementById("date-continue").disabled = false;
+
+  // Load available time slots
+  loadTimeSlots(dateStr);
+}
+
+// Load available time slots
+async function loadTimeSlots(date) {
+  const dateObj = new Date(date + "T00:00:00");
+  const dayOfWeek = dateObj.getDay();
+
+  // Get working hours from data attributes (set by PHP)
+  const weekdayStart =
+    document.getElementById("time-slots").dataset.weekdayStart || "16:30";
+  const weekdayEnd =
+    document.getElementById("time-slots").dataset.weekdayEnd || "21:00";
+  const saturdayStart =
+    document.getElementById("time-slots").dataset.saturdayStart || "09:00";
+  const saturdayEnd =
+    document.getElementById("time-slots").dataset.saturdayEnd || "14:00";
+  const slotDuration = parseInt(
+    document.getElementById("time-slots").dataset.slotDuration || "30"
+  );
+
+  // Calculate total duration of selected services
+  const totalDuration = bookingData.services.reduce(
+    (sum, s) => sum + parseInt(s.duration_minutes),
+    0
+  );
+
+  if (totalDuration === 0) {
+    document.getElementById("time-slots").innerHTML =
+      '<p style="text-align: center; color: var(--clr-warning);">Bitte wählen Sie zuerst Services aus.</p>';
+    return;
+  }
+
+  if (dayOfWeek === 0) {
+    // Sunday - closed
+    document.getElementById("time-slots").innerHTML =
+      '<p style="text-align: center; color: var(--clr-error);">Sonntags geschlossen</p>';
+    return;
+  }
+
+  // Show loading state
+  document.getElementById("time-slots").innerHTML =
+    '<p style="text-align: center;">Verfügbare Termine werden geprüft...</p>';
+
+  // Check availability with the new improved API
+  try {
+    const response = await fetch("api/check-availability.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: date,
+        duration: totalDuration,
+      }),
+    });
+
+    const result = await response.json();
+
+    // Render time slots based on result
+    const container = document.getElementById("time-slots");
+
+    if (!result.available) {
+      // No slots available for this duration
+      container.innerHTML = `
+                <div class="alert alert-warning" style="grid-column: 1 / -1;">
+                    <strong>Keine passenden Termine verfügbar</strong><br>
+                    ${
+                      result.message ||
+                      "An diesem Tag ist nicht genügend zusammenhängende Zeit für Ihre gewählten Services verfügbar."
+                    }
+                    <br><br>
+                    <small>Benötigte Zeit: ${totalDuration} Minuten<br>
+                    Bitte wählen Sie einen anderen Tag.</small>
+                </div>
+            `;
+
+      // Disable continue button
+      document.getElementById("time-continue").disabled = true;
+    } else if (result.blocked === "all") {
+      // Entire day is blocked
+      container.innerHTML = `
+                <div class="alert alert-error" style="grid-column: 1 / -1;">
+                    ${result.message || "Dieser Tag ist nicht verfügbar"}
+                </div>
+            `;
+      document.getElementById("time-continue").disabled = true;
+    } else if (result.slots && result.slots.length > 0) {
+      // Create info header
+      const infoHtml = `
+                <div style="grid-column: 1 / -1; margin-bottom: 1rem;">
+                    <small style="color: var(--clr-primary-a40);">
+                        ${result.message || "Verfügbare Termine"} | 
+                        Dauer Ihrer Services: ${totalDuration} Minuten
+                    </small>
+                </div>
+            `;
+
+      // Render available slots in grid
+      const slotsHtml = result.slots
+        .map((slot) => {
+          const isAvailable = slot.available;
+          return `<div class="time-slot ${!isAvailable ? "disabled" : ""}" 
+                             onclick="${
+                               isAvailable ? `selectTime('${slot.time}')` : ""
+                             }"
+                             title="${
+                               !isAvailable
+                                 ? "Dieser Termin ist nicht verfügbar"
+                                 : ""
+                             }">
+                            ${slot.time}
+                        </div>`;
+        })
+        .join("");
+
+      // Combine info and slots
+      container.innerHTML = infoHtml + slotsHtml;
+    } else {
+      // Fallback for old API response format
+      const blockedSlots = result;
+
+      let startTime, endTime;
+      if (dayOfWeek === 6) {
+        startTime = saturdayStart;
+        endTime = saturdayEnd;
+      } else {
+        startTime = weekdayStart;
+        endTime = weekdayEnd;
+      }
+
+      // Generate time slots
+      const slots = [];
+      let current = new Date(`2000-01-01 ${startTime}`);
+      const end = new Date(`2000-01-01 ${endTime}`);
+
+      while (current < end) {
+        const timeStr = current.toTimeString().slice(0, 5);
+        slots.push(timeStr);
+        current.setMinutes(current.getMinutes() + slotDuration);
+      }
+
+      // Create info header
+      const infoHtml = `
+                <div style="grid-column: 1 / -1; margin-bottom: 1rem;">
+                    <small style="color: var(--clr-primary-a40);">
+                        ${
+                          slots.length - (blockedSlots.length || 0)
+                        } Termine verfügbar | 
+                        Dauer Ihrer Services: ${totalDuration} Minuten
+                    </small>
+                </div>
+            `;
+
+      // Render slots
+      const slotsHtml = slots
+        .map((slot) => {
+          const isBlocked = blockedSlots.includes(slot);
+          return `<div class="time-slot ${isBlocked ? "disabled" : ""}" 
+                             onclick="${
+                               !isBlocked ? `selectTime('${slot}')` : ""
+                             }">
+                            ${slot}
+                        </div>`;
+        })
+        .join("");
+
+      container.innerHTML = infoHtml + slotsHtml;
+    }
+  } catch (error) {
+    console.error("Error loading time slots:", error);
+    document.getElementById("time-slots").innerHTML =
+      '<p style="text-align: center; color: var(--clr-error);">Fehler beim Laden der Termine</p>';
+  }
+}
+
+function selectTime(time) {
+  // Remove previous selection
+  document.querySelectorAll(".time-slot.selected").forEach((el) => {
+    el.classList.remove("selected");
+  });
+
+  // Add selection
+  event.target.classList.add("selected");
+  bookingData.time = time;
+
+  // Enable continue button
+  document.getElementById("time-continue").disabled = false;
+}
+
+// Navigation functions
+function validateStep(step) {
+  if (step === 1) {
+    // Validate customer data AND vehicle data
+    const requiredCustomer = [
+      "first_name",
+      "last_name",
+      "email",
+      "phone",
+      "address",
+    ];
+    const requiredVehicle = [
+      "car_brand",
+      "car_model",
+      "car_year",
+      "license_plate",
+    ];
+    const allRequired = [...requiredCustomer, ...requiredVehicle];
+    let valid = true;
+
+    allRequired.forEach((field) => {
+      const input = document.getElementById(field);
+      const error = input.nextElementSibling;
+
+      if (!input.value.trim()) {
+        input.classList.add("error");
+        if (error) error.style.display = "block";
+        valid = false;
+      } else {
+        input.classList.remove("error");
+        if (error) error.style.display = "none";
+        bookingData.customer[field] = input.value.trim();
+      }
+    });
+
+    // Special validation for email
+    const emailInput = document.getElementById("email");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput.value)) {
+      emailInput.classList.add("error");
+      const emailError = emailInput.nextElementSibling;
+      if (emailError) {
+        emailError.textContent = "Bitte gültige E-Mail-Adresse eingeben";
+        emailError.style.display = "block";
+      }
+      valid = false;
+    }
+
+    // Special validation for year
+    const yearInput = document.getElementById("car_year");
+    const year = parseInt(yearInput.value);
+    if (year < 1950 || year > 2026 || isNaN(year)) {
+      yearInput.classList.add("error");
+      const yearError = yearInput.nextElementSibling;
+      if (yearError) {
+        yearError.textContent = "Bitte gültiges Baujahr eingeben (1950-2026)";
+        yearError.style.display = "block";
+      }
+      valid = false;
+    }
+
+    // Check if address was calculated
+    if (!bookingData.distance || bookingData.distance === 0) {
+      const addressInput = document.getElementById("address");
+      addressInput.classList.add("error");
+      const addressError = addressInput.nextElementSibling;
+      if (addressError) {
+        addressError.textContent =
+          "Bitte Adresse eingeben und Entfernung berechnen lassen";
+        addressError.style.display = "block";
+      }
+      valid = false;
+    }
+
+    return valid && bookingData.distance <= 35;
+  } else if (step === 2) {
+    // Validate services selection
+    if (bookingData.services.length === 0) {
+      alert("Bitte wählen Sie mindestens einen Service aus.");
+      return false;
+    }
+
+    if (bookingData.distance > 10 && bookingData.subtotal < 59.9) {
+      alert(
+        "Bei einer Entfernung über 10km beträgt der Mindestbestellwert 59,90€"
+      );
+      return false;
+    }
+
+    return true;
+  } else if (step === 3) {
+    return bookingData.date !== null;
+  } else if (step === 4) {
+    return bookingData.time !== null;
+  }
+
+  return true;
+}
+
+function nextStep() {
+  if (!validateStep(currentStep)) {
+    return;
+  }
+
+  // Update steps UI
+  document
+    .querySelector(`.step[data-step="${currentStep}"]`)
+    .classList.remove("active");
+  document
+    .querySelector(`.step[data-step="${currentStep}"]`)
+    .classList.add("completed");
+  document.querySelector(
+    `.step-panel[data-step="${currentStep}"]`
+  ).style.display = "none";
+
+  currentStep++;
+
+  document
+    .querySelector(`.step[data-step="${currentStep}"]`)
+    .classList.add("active");
+  document.querySelector(
+    `.step-panel[data-step="${currentStep}"]`
+  ).style.display = "block";
+
+  // Load step-specific content
+  if (currentStep === 4) {
+    loadTimeSlots(bookingData.date);
+  } else if (currentStep === 5) {
+    showSummary();
+  }
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+
+function previousStep() {
+  document
+    .querySelector(`.step[data-step="${currentStep}"]`)
+    .classList.remove("active");
+  document.querySelector(
+    `.step-panel[data-step="${currentStep}"]`
+  ).style.display = "none";
+
+  currentStep--;
+
+  document
+    .querySelector(`.step[data-step="${currentStep}"]`)
+    .classList.remove("completed");
+  document
+    .querySelector(`.step[data-step="${currentStep}"]`)
+    .classList.add("active");
+  document.querySelector(
+    `.step-panel[data-step="${currentStep}"]`
+  ).style.display = "block";
+
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+
+// Show booking summary
+function showSummary() {
+  // Customer data
+  document.getElementById("summary-customer").innerHTML = `
+        <p><strong>${bookingData.customer.first_name} ${
+    bookingData.customer.last_name
+  }</strong></p>
+        <p>${bookingData.customer.email}</p>
+        <p>${bookingData.customer.phone}</p>
+        <p>${bookingData.customer.address}</p>
+        ${
+          bookingData.customer.car_brand
+            ? `<p>Fahrzeug: ${bookingData.customer.car_brand} ${
+                bookingData.customer.car_model || ""
+              } ${
+                bookingData.customer.car_year
+                  ? `(${bookingData.customer.car_year})`
+                  : ""
+              }</p>`
+            : ""
+        }
+    `;
+
+  // Services
+  document.getElementById("summary-services").innerHTML =
+    bookingData.services
+      .map(
+        (service) => `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span>${service.name} (${service.duration_minutes} Min.)</span>
+            <span>${parseFloat(service.price).toFixed(2)}€</span>
+        </div>
+    `
+      )
+      .join("") +
+    `
+        <hr style="margin: 1rem 0; border-color: var(--clr-surface-a30);">
+        <div style="display: flex; justify-content: space-between;">
+            <strong>Zwischensumme:</strong>
+            <strong>${bookingData.subtotal.toFixed(2)}€</strong>
+        </div>
+        ${
+          bookingData.travelCost > 0
+            ? `
+        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+            <span>Anfahrtskosten (${bookingData.distance.toFixed(1)} km):</span>
+            <span>${bookingData.travelCost.toFixed(2)}€</span>
+        </div>
+        `
+            : ""
+        }
+    `;
+
+  // Appointment
+  const dateParts = bookingData.date.split("-");
+  const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+  const dateStr = dateObj.toLocaleDateString("de-DE", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  document.getElementById("summary-appointment").innerHTML = `
+        <p><strong>Datum:</strong> ${dateStr}</p>
+        <p><strong>Uhrzeit:</strong> ${bookingData.time} Uhr</p>
+        <p><strong>Gesamtdauer:</strong> ${bookingData.services.reduce(
+          (sum, s) => sum + parseInt(s.duration_minutes),
+          0
+        )} Minuten</p>
+    `;
+
+  // Total
+  bookingData.total = bookingData.subtotal + bookingData.travelCost;
+  document.getElementById(
+    "summary-total"
+  ).textContent = `${bookingData.total.toFixed(2)}€`;
+}
+
+// Confirm booking
+async function confirmBooking() {
+  try {
+    const response = await fetch("api/process-booking.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bookingData),
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      // Show confirmation
+      document.querySelector(`.step[data-step="5"]`).classList.remove("active");
+      document.querySelector(`.step[data-step="5"]`).classList.add("completed");
+      document.querySelector(`.step-panel[data-step="5"]`).style.display =
+        "none";
+
+      document.querySelector(`.step[data-step="6"]`).classList.add("active");
+      document.querySelector(`.step-panel[data-step="6"]`).style.display =
+        "block";
+
+      document.getElementById(
+        "booking-number"
+      ).textContent = `#${result.bookingNumber}`;
+
+      // Scroll to top
+      window.scrollTo(0, 0);
+    } else {
+      alert("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.");
+    }
+  } catch (error) {
+    console.error("Error confirming booking:", error);
+    alert("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.");
+  }
+}
+
+// Process payment
+function processPayment() {
+  // Here you would integrate PayPal or credit card payment
+  alert("Weiterleitung zur Zahlung...");
+}
