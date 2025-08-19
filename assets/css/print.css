@@ -1,183 +1,372 @@
 @media print {
-  /* Hide everything except print area */
-  body * {
-    visibility: hidden;
+  /* FIRST: Force EVERYTHING to white background */
+  * {
+    background: white !important;
+    background-color: white !important;
+    background-image: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    outline: none !important;
   }
 
-  #print-area,
-  #print-area * {
-    visibility: visible;
+  /* Reset HTML and BODY specifically */
+  html {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  #print-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-
-  /* Reset backgrounds for print */
   body {
     background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
     color: black !important;
   }
 
-  /* Print specific styles */
-  .print-container {
-    max-width: 210mm;
-    margin: 0 auto;
-    padding: 20mm;
-    font-family: "Space Grotesk", "Arial", sans-serif;
+  /* Hide everything first */
+  body * {
+    visibility: hidden;
+    background: white !important;
   }
 
+  /* Show only print area */
+  #print-area,
+  #print-area * {
+    visibility: visible;
+    background: white !important;
+  }
+
+  #print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    border: none !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Print container - ULTRA COMPACT */
+  .print-container {
+    max-width: 200mm !important;
+    margin: 5mm !important;
+    padding: 5mm !important;
+    font-family: Arial, sans-serif !important;
+    background: white !important;
+    border: none !important;
+  }
+
+  /* Company header - TINY */
   .print-header {
-    text-align: center;
-    border-bottom: 2px solid #000;
-    padding-bottom: 10mm;
-    margin-bottom: 10mm;
+    text-align: center !important;
+    border-bottom: 0.5pt solid #999 !important;
+    padding-bottom: 2mm !important;
+    margin-bottom: 3mm !important;
+    background: white !important;
   }
 
   .print-logo {
-    height: 30mm;
-    margin-bottom: 5mm;
+    height: 8mm !important;
+    margin-bottom: 1mm !important;
   }
 
   .print-company {
-    font-size: 18pt;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    font-size: 9pt !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    color: black !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
+  /* Company contact info - TINY */
+  .print-header div[style*="font-size"] {
+    font-size: 6pt !important;
+    color: #555 !important;
+    line-height: 1.1 !important;
+    margin-top: 1mm !important;
+  }
+
+  /* Title - SMALLER */
   .print-title {
-    font-size: 24pt;
-    margin: 10mm 0;
-    text-align: center;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    font-size: 10pt !important;
+    margin: 3mm 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    text-transform: uppercase !important;
+    color: black !important;
+    font-weight: bold !important;
+    line-height: 1 !important;
   }
 
-  .print-booking-number {
-    text-align: center;
-    font-size: 16pt;
-    margin: 10mm 0;
-    padding: 5mm;
-    border: 2px solid #000;
+  /* Remove ALL containers */
+  .confirmation-container {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    border: none !important;
+    text-align: left !important;
   }
 
-  .print-section {
-    margin: 10mm 0;
-    page-break-inside: avoid;
+  .confirmation-card {
+    background: white !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
   }
 
-  .print-section h3 {
-    font-size: 14pt;
-    border-bottom: 1px solid #000;
-    padding-bottom: 2mm;
-    margin-bottom: 5mm;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  /* Booking number - TINY */
+  .booking-number-section {
+    text-align: center !important;
+    margin: 3mm 0 !important;
+    padding: 2mm 0 !important;
+    border-bottom: 0.5pt solid #bbb !important;
+    background: white !important;
   }
 
-  .print-grid {
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 2mm;
-    margin: 5mm 0;
+  .booking-number-section > div:first-child {
+    font-size: 6pt !important;
+    text-transform: uppercase !important;
+    color: #777 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1 !important;
   }
 
-  .print-label {
-    font-weight: bold;
-    text-transform: uppercase;
-    font-size: 10pt;
+  #booking-number {
+    font-size: 9pt !important;
+    font-weight: bold !important;
+    color: black !important;
+    line-height: 1 !important;
+    margin: 1mm 0 0 0 !important;
+    padding: 0 !important;
   }
 
-  .print-value {
-    font-size: 11pt;
+  /* Section headers - TINY */
+  .detail-section {
+    margin: 0 0 3mm 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: white !important;
   }
 
-  .print-services {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 5mm 0;
+  .detail-section h4 {
+    font-size: 7pt !important;
+    border-bottom: 0.5pt solid #bbb !important;
+    padding: 0 0 0.5mm 0 !important;
+    margin: 0 0 1mm 0 !important;
+    text-transform: uppercase !important;
+    color: black !important;
+    font-weight: bold !important;
+    line-height: 1 !important;
   }
 
-  .print-services th {
-    border-bottom: 2px solid #000;
-    padding: 3mm;
-    text-align: left;
-    font-weight: bold;
-    text-transform: uppercase;
-    font-size: 10pt;
+  /* Labels - ULTRA TINY */
+  span[style*="color: var(--clr-primary-a40)"] {
+    font-size: 6pt !important;
+    color: #777 !important;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
   }
 
-  .print-services td {
-    border-bottom: 1px solid #ccc;
-    padding: 3mm;
-    font-size: 11pt;
+  /* Values - TINY */
+  .detail-section strong {
+    font-size: 7pt !important;
+    color: black !important;
+    font-weight: normal !important;
+    line-height: 1.1 !important;
   }
 
-  .print-total {
-    margin-top: 10mm;
-    padding: 5mm;
-    border: 2px solid #000;
-    text-align: center;
-    page-break-inside: avoid;
+  /* Detail content - COMPACT */
+  #confirmation-customer-details,
+  #confirmation-vehicle-details,
+  #confirmation-appointment-details {
+    font-size: 7pt !important;
+    line-height: 1.2 !important;
+    color: black !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  .print-total-label {
-    font-size: 14pt;
-    text-transform: uppercase;
-    margin-bottom: 3mm;
+  /* Reduce BR spacing */
+  br {
+    line-height: 0.5 !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  .print-total-amount {
-    font-size: 24pt;
-    font-weight: bold;
+  /* Services table - ULTRA COMPACT */
+  #confirmation-services {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
   }
 
+  #confirmation-services table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 1mm 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    border: none !important;
+  }
+
+  #confirmation-services thead tr {
+    border: none !important;
+    border-bottom: 0.5pt solid #999 !important;
+  }
+
+  #confirmation-services th {
+    border: none !important;
+    padding: 0.5mm 0 !important;
+    text-align: left !important;
+    font-weight: normal !important;
+    text-transform: uppercase !important;
+    font-size: 6pt !important;
+    color: #777 !important;
+    background: white !important;
+    line-height: 1 !important;
+  }
+
+  #confirmation-services th:last-child {
+    text-align: right !important;
+  }
+
+  #confirmation-services td {
+    border: none !important;
+    border-bottom: 0.25pt solid #eee !important;
+    padding: 0.8mm 0 !important;
+    font-size: 7pt !important;
+    color: black !important;
+    background: white !important;
+    line-height: 1 !important;
+  }
+
+  #confirmation-services td:last-child {
+    text-align: right !important;
+  }
+
+  #confirmation-services tbody tr:last-child td {
+    border-bottom: none !important;
+  }
+
+  #confirmation-services tr[style*="border-top"] td {
+    border-top: 0.5pt solid #999 !important;
+    padding-top: 1mm !important;
+  }
+
+  #confirmation-services strong {
+    font-weight: bold !important;
+    font-size: 7pt !important;
+  }
+
+  /* Total amount box - COMPACT */
+  div[style*="background: var(--clr-surface-a20)"] {
+    margin: 3mm 0 !important;
+    padding: 2mm !important;
+    border: 0.5pt solid #999 !important;
+    text-align: center !important;
+    background: white !important;
+  }
+
+  /* Total label */
+  div[style*="text-transform: uppercase"] {
+    font-size: 6pt !important;
+    text-transform: uppercase !important;
+    color: #777 !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Total amount */
+  #confirmation-total {
+    font-size: 10pt !important;
+    font-weight: bold !important;
+    color: black !important;
+    line-height: 1 !important;
+    margin: 1mm 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Payment info */
+  div[style*="margin-top: 0.5rem"] {
+    font-size: 6pt !important;
+    color: #777 !important;
+    margin: 0.5mm 0 0 0 !important;
+    line-height: 1 !important;
+  }
+
+  /* Footer - TINY */
   .print-footer {
-    margin-top: 15mm;
-    padding-top: 5mm;
-    border-top: 1px solid #000;
-    text-align: center;
-    font-size: 9pt;
+    margin-top: 3mm !important;
+    padding-top: 1mm !important;
+    border-top: 0.5pt solid #bbb !important;
+    text-align: center !important;
+    font-size: 6pt !important;
+    color: #777 !important;
+    background: white !important;
+    line-height: 1.1 !important;
   }
 
-  .print-qr {
-    width: 30mm;
-    height: 30mm;
-    margin: 5mm auto;
-    border: 1px solid #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 8pt;
-    color: #666;
+  .print-footer p {
+    margin: 0.5mm 0 !important;
+    padding: 0 !important;
   }
 
-  /* Hide non-print elements */
+  /* Hide all non-print elements */
   .no-print,
   .btn,
   .header,
   .booking-steps,
-  button {
+  button,
+  nav,
+  .mobile-menu-toggle,
+  [onclick],
+  div[style*="font-size: 4rem"],
+  div[style*="padding: 2rem 0"],
+  div[style*="display: flex"] {
     display: none !important;
   }
 
-  /* Ensure black text */
+  /* Ensure text colors */
   * {
-    color: black !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
 
-  /* Page breaks */
-  .page-break {
-    page-break-after: always;
+  /* Remove any remaining backgrounds */
+  div[class*="surface"],
+  div[class*="container"],
+  div[class*="card"] {
+    background: white !important;
+    background-color: white !important;
+    border: none !important;
   }
 
-  .avoid-break {
-    page-break-inside: avoid;
+  /* Page setup */
+  @page {
+    margin: 0 !important;
+    padding: 0 !important;
+    size: A4 !important;
+  }
+
+  /* Ensure no page margins */
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
   }
 }
