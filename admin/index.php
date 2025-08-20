@@ -41,7 +41,7 @@ $recent = $db->fetchAll("
     <link rel="stylesheet" href="../assets/css/theme.css">
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
-    <link rel="stylesheet" href="../assets/css/mobile.css">
+    <link rel="stylesheet" href="../assets/css/admin-mobile.css">
 </head>
 
 <body>
@@ -60,6 +60,7 @@ $recent = $db->fetchAll("
             <a href="logout.php" class="sidebar-link" style="margin-top: 2rem; color: var(--clr-error);">
                 Abmelden
             </a>
+            <a href="../index.php" class="sidebar-link">zum Termin Planner</a>
         </nav>
     </div>
 
@@ -103,99 +104,96 @@ $recent = $db->fetchAll("
                     Noch keine Termine vorhanden.
                 </p>
             <?php else: ?>
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Kunde</th>
-                            <th>Datum</th>
-                            <th>Zeit</th>
-                            <th>Betrag</th>
-                            <th>Status</th>
-                            <th>Aktionen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($recent as $appointment): ?>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
                             <tr>
-                                <td>#<?php echo $appointment['id']; ?></td>
-                                <td>
-                                    <?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?>
-                                </td>
-                                <td><?php echo date('d.m.Y', strtotime($appointment['appointment_date'])); ?></td>
-                                <td><?php echo $appointment['appointment_time']; ?></td>
-                                <td><?php echo number_format($appointment['total_price'], 2, ',', '.'); ?>€</td>
-                                <td>
-                                    <?php
-                                    $statusColors = [
-                                        'pending' => 'var(--clr-warning)',
-                                        'confirmed' => 'var(--clr-info)',
-                                        'completed' => 'var(--clr-success)',
-                                        'cancelled' => 'var(--clr-error)'
-                                    ];
-                                    $statusLabels = [
-                                        'pending' => 'Ausstehend',
-                                        'confirmed' => 'Bestätigt',
-                                        'completed' => 'Abgeschlossen',
-                                        'cancelled' => 'Storniert'
-                                    ];
-                                    ?>
-                                    <span style="color: <?php echo $statusColors[$appointment['status']]; ?>">
-                                        <?php echo $statusLabels[$appointment['status']]; ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="appointments.php?id=<?php echo $appointment['id']; ?>"
-                                        class="btn btn-primary btn-sm">
-                                        Details
-                                    </a>
-                                </td>
+                                <th>ID</th>
+                                <th>Kunde</th>
+                                <th>Datum</th>
+                                <th>Zeit</th>
+                                <th>Betrag</th>
+                                <th>Status</th>
+                                <th>Aktionen</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($recent as $appointment): ?>
+                                <tr>
+                                    <td>#<?php echo $appointment['id']; ?></td>
+                                    <td>
+                                        <?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?>
+                                    </td>
+                                    <td><?php echo date('d.m.Y', strtotime($appointment['appointment_date'])); ?></td>
+                                    <td><?php echo $appointment['appointment_time']; ?></td>
+                                    <td><?php echo number_format($appointment['total_price'], 2, ',', '.'); ?>€</td>
+                                    <td>
+                                        <?php
+                                        $statusColors = [
+                                            'pending' => 'var(--clr-warning)',
+                                            'confirmed' => 'var(--clr-info)',
+                                            'completed' => 'var(--clr-success)',
+                                            'cancelled' => 'var(--clr-error)'
+                                        ];
+                                        $statusLabels = [
+                                            'pending' => 'Ausstehend',
+                                            'confirmed' => 'Bestätigt',
+                                            'completed' => 'Abgeschlossen',
+                                            'cancelled' => 'Storniert'
+                                        ];
+                                        ?>
+                                        <span style="color: <?php echo $statusColors[$appointment['status']]; ?>">
+                                            <?php echo $statusLabels[$appointment['status']]; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="appointments.php?id=<?php echo $appointment['id']; ?>"
+                                            class="btn btn-primary btn-sm">
+                                            Details
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
     </div>
 
     <script>
+        f // Verbesserte Sidebar-Funktionalität
         function toggleSidebar() {
             const sidebar = document.getElementById('adminSidebar');
-            sidebar.classList.toggle('active');
-        }
+            const isActive = sidebar.classList.contains('active');
 
-        // NEU: Touch-Optimierung hinzufügen
-        if ('ontouchstart' in window) {
-            document.addEventListener('DOMContentLoaded', function() {
-                document.body.classList.add('touch-device');
-
-                // Verbessere Touch-Feedback
-                document.querySelectorAll('.btn, .time-slot, .calendar-day').forEach(el => {
-                    el.addEventListener('touchstart', function() {
-                        this.classList.add('touch-active');
-                    });
-                    el.addEventListener('touchend', function() {
-                        setTimeout(() => this.classList.remove('touch-active'), 100);
-                    });
-                });
-            });
-        }
-
-        // NEU: Sidebar schließen bei Klick außerhalb
-        function closeSidebarOutside(e) {
-            const sidebar = document.getElementById('adminSidebar');
-            const toggle = document.querySelector('.mobile-menu-toggle');
-
-            if (sidebar && toggle && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+            if (!isActive) {
+                sidebar.classList.add('active');
+                // Füge Event-Listener für Klick außerhalb hinzu
+                document.addEventListener('click', closeSidebarOnClickOutside);
+            } else {
                 sidebar.classList.remove('active');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
             }
         }
 
-        // Füge Event Listener hinzu wenn Sidebar geöffnet wird
-        document.addEventListener('click', function(e) {
+        function closeSidebarOnClickOutside(e) {
             const sidebar = document.getElementById('adminSidebar');
-            if (sidebar && sidebar.classList.contains('active')) {
-                closeSidebarOutside(e);
+            const toggle = document.querySelector('.mobile-menu-toggle');
+
+            if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
+            }
+        }
+
+        // ESC-Taste schließt Sidebar
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const sidebar = document.getElementById('adminSidebar');
+                if (sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
             }
         });
     </script>

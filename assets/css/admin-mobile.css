@@ -1,0 +1,835 @@
+/* ================================================
+   ADMIN PANEL MOBILE CSS
+   Dedizierte Styles nur für Admin Panel
+   ================================================ */
+
+/* Import Google Font für Admin */
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
+
+/* ================================================
+   MOBILE MENU TOGGLE BUTTON
+   ================================================ */
+.mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1001;
+  background: var(--clr-surface-a20);
+  border: 1px solid var(--clr-surface-a30);
+  color: var(--clr-primary-a0);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 1.2rem;
+  width: 45px;
+  height: 45px;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle:hover {
+  background: var(--clr-surface-a30);
+}
+
+/* Zeige Toggle nur auf mobile */
+@media (max-width: 1024px) {
+  .mobile-menu-toggle {
+    display: flex;
+  }
+}
+
+/* ================================================
+   SIDEBAR MOBILE OPTIMIERUNG
+   ================================================ */
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    background: rgba(0, 0, 0, 0.98);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-sidebar.active {
+    transform: translateX(0);
+  }
+
+  /* Overlay wenn Sidebar offen ist */
+  .admin-sidebar.active::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: -1;
+  }
+
+  .admin-content {
+    margin-left: 0 !important;
+    padding: 1rem;
+    padding-top: 4rem; /* Platz für Toggle Button */
+    min-height: 100vh;
+  }
+
+  /* Sidebar Inhalt Optimierung */
+  .admin-sidebar h2 {
+    font-size: 1.1rem;
+    padding: 0 1.25rem;
+    margin-top: 2.5rem;
+  }
+
+  .sidebar-link {
+    padding: 1.25rem 1.5rem;
+    font-size: 0.9rem;
+    border-left-width: 3px;
+  }
+}
+
+/* ================================================
+   STATISTIK KARTEN - MOBILE
+   ================================================ */
+@media (max-width: 768px) {
+  /* Grid anpassen */
+  .grid-4 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+
+  .stat-card {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+  }
+
+  .stat-card h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    color: var(--clr-primary-a30);
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    margin: 0.25rem 0;
+  }
+
+  .stat-card p {
+    font-size: 0.8rem;
+    margin: 0;
+    color: var(--clr-primary-a40);
+  }
+
+  /* Horizontales Layout für Stats */
+  .stat-card > div:first-child {
+    flex: 1;
+  }
+
+  .stat-card > div:last-child {
+    text-align: right;
+  }
+}
+
+/* Sehr kleine Bildschirme */
+@media (max-width: 480px) {
+  .grid-4 {
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+}
+
+/* ================================================
+   ADMIN TABELLEN - MOBILE
+   ================================================ */
+@media (max-width: 768px) {
+  /* Horizontales Scrollen für Tabellen */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+
+  .admin-table {
+    min-width: 600px;
+    font-size: 0.85rem;
+  }
+
+  .admin-table th,
+  .admin-table td {
+    padding: 0.75rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  /* Wichtige Spalten priorisieren */
+  .admin-table td:first-child,
+  .admin-table th:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--clr-surface-a10);
+    z-index: 1;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Status Badges kleiner */
+  .status-badge {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* Action Buttons */
+  .action-buttons {
+    flex-direction: row;
+    gap: 0.25rem;
+  }
+
+  .btn-sm {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Alternative: Card-basierte Tabelle für sehr kleine Screens */
+@media (max-width: 480px) {
+  .admin-table-mobile {
+    display: none;
+  }
+
+  .admin-cards {
+    display: block;
+  }
+
+  .admin-card {
+    background: var(--clr-surface-a10);
+    border: 1px solid var(--clr-surface-a20);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .admin-card-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--clr-surface-a20);
+  }
+
+  .admin-card-body {
+    display: grid;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .admin-card-row {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .admin-card-label {
+    color: var(--clr-primary-a40);
+    font-size: 0.75rem;
+  }
+
+  .admin-card-value {
+    color: var(--clr-primary-a10);
+    font-weight: 500;
+  }
+}
+
+/* ================================================
+   FILTER BAR - MOBILE
+   ================================================ */
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .filter-bar form {
+    width: 100%;
+  }
+
+  .filter-bar select,
+  .filter-bar input {
+    width: 100% !important;
+    margin-bottom: 0.5rem;
+  }
+
+  .filter-bar .btn {
+    width: 100%;
+  }
+}
+
+/* ================================================
+   KALENDER - MOBILE
+   ================================================ */
+@media (max-width: 768px) {
+  .calendar-admin {
+    font-size: 0.75rem;
+    gap: 1px;
+  }
+
+  .calendar-cell {
+    padding: 0.35rem;
+    min-height: 60px;
+  }
+
+  .calendar-cell-header {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.65rem;
+  }
+
+  .day-number {
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem;
+  }
+
+  .appointment-count,
+  .blocked-indicator {
+    font-size: 0.65rem;
+    line-height: 1.2;
+  }
+
+  /* Kalender Navigation */
+  .calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .calendar-nav h2 {
+    font-size: 1.1rem;
+    order: 1;
+    width: 100%;
+    text-align: center;
+  }
+
+  .calendar-nav .btn {
+    flex: 1;
+    padding: 0.6rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Sehr kleine Bildschirme - Kalender */
+@media (max-width: 480px) {
+  .calendar-admin {
+    font-size: 0.65rem;
+  }
+
+  .calendar-cell {
+    padding: 0.25rem;
+    min-height: 50px;
+  }
+
+  .day-number {
+    font-size: 0.75rem;
+  }
+
+  .appointment-count,
+  .blocked-indicator {
+    font-size: 0.6rem;
+  }
+
+  /* Verstecke Wochentag-Labels auf sehr kleinen Screens */
+  .calendar-cell-header span {
+    display: none;
+  }
+
+  .calendar-cell-header::after {
+    content: attr(data-short);
+    font-size: 0.6rem;
+  }
+}
+
+/* ================================================
+   FORMULARE & SETTINGS - MOBILE
+   ================================================ */
+@media (max-width: 768px) {
+  .settings-section {
+    margin-bottom: 2rem;
+  }
+
+  .settings-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .form-label {
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+    color: var(--clr-primary-a20);
+  }
+
+  .form-control {
+    padding: 0.75rem;
+    font-size: 16px; /* Verhindert Auto-Zoom auf iOS */
+    width: 100%;
+  }
+
+  textarea.form-control {
+    min-height: 80px;
+  }
+
+  /* Grid für Form Inputs */
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 0;
+  }
+
+  /* Buttons in Forms */
+  .form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+    padding: 0.875rem;
+  }
+}
+
+/* ================================================
+   MODAL - MOBILE
+   ================================================ */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    max-width: none;
+    margin: 1rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    padding: 1rem;
+    position: sticky;
+    top: 0;
+    background: var(--clr-surface-a10);
+    z-index: 1;
+  }
+
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-footer {
+    padding: 1rem;
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+    position: sticky;
+    bottom: 0;
+    background: var(--clr-surface-a10);
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+    padding: 0.875rem;
+  }
+
+  .modal-footer .btn-primary {
+    order: -1;
+  }
+}
+
+/* ================================================
+   TOUCH OPTIMIERUNG
+   ================================================ */
+@media (hover: none) and (pointer: coarse) {
+  /* Größere Touch-Targets */
+  .sidebar-link {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+  }
+
+  .btn,
+  .form-control,
+  select,
+  input[type="date"],
+  input[type="time"] {
+    min-height: 44px;
+  }
+
+  /* Touch Feedback */
+  .touch-active {
+    opacity: 0.8;
+    transform: scale(0.98);
+  }
+
+  /* Entferne Hover-Effekte auf Touch */
+  .sidebar-link:hover,
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/* ================================================
+   LANDSCAPE MODUS - MOBILE
+   ================================================ */
+@media (max-width: 812px) and (orientation: landscape) {
+  .admin-content {
+    padding-top: 3rem;
+  }
+
+  .stat-card {
+    padding: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  .calendar-cell {
+    min-height: 45px;
+  }
+
+  .admin-sidebar h2 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .sidebar-link {
+    padding: 0.875rem 1.25rem;
+  }
+}
+
+/* ================================================
+   SCROLLBAR STYLING
+   ================================================ */
+@media (max-width: 1024px) {
+  .admin-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .admin-sidebar::-webkit-scrollbar-track {
+    background: var(--clr-surface-a20);
+  }
+
+  .admin-sidebar::-webkit-scrollbar-thumb {
+    background: var(--clr-surface-a40);
+    border-radius: 3px;
+  }
+
+  .table-responsive::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .table-responsive::-webkit-scrollbar-track {
+    background: var(--clr-surface-a10);
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: var(--clr-surface-a30);
+    border-radius: 3px;
+  }
+}
+
+/* ================================================
+   UTILITIES & HELPERS
+   ================================================ */
+@media (max-width: 768px) {
+  /* Text Utilities */
+  .text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 150px;
+  }
+
+  /* Spacing Utilities */
+  .mb-mobile-2 {
+    margin-bottom: 1rem !important;
+  }
+
+  .p-mobile-1 {
+    padding: 0.5rem !important;
+  }
+
+  /* Display Utilities */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .show-mobile {
+    display: block !important;
+  }
+
+  /* Flexbox Utilities */
+  .flex-mobile-column {
+    flex-direction: column !important;
+  }
+
+  .flex-mobile-wrap {
+    flex-wrap: wrap !important;
+  }
+}
+
+/* ================================================
+   PRINT STYLES
+   ================================================ */
+@media print {
+  .mobile-menu-toggle,
+  .admin-sidebar,
+  .filter-bar,
+  .action-buttons {
+    display: none !important;
+  }
+
+  .admin-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  .admin-table {
+    font-size: 10pt;
+  }
+}
+
+/* ================================================
+   SERVICES TABELLE - MOBILE FIX
+   ================================================ */
+
+/* Entferne die problematischen negativen Margins */
+@media (max-width: 768px) {
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Keine negativen Margins mehr */
+    margin: 0;
+    padding: 0;
+    /* Sichtbarer Scrollbar-Bereich */
+    padding-bottom: 10px;
+  }
+
+  .admin-table {
+    min-width: 700px; /* Etwas mehr Platz für alle Spalten */
+    font-size: 0.85rem;
+    width: 100%;
+  }
+
+  /* Erste Spalte nicht mehr sticky - vereinfacht das Scrollen */
+  .admin-table td:first-child,
+  .admin-table th:first-child {
+    position: static; /* Statt sticky */
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* Action Buttons kompakter */
+  .action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 100px;
+  }
+
+  .action-buttons form {
+    width: 100%;
+  }
+
+  .action-buttons .btn-sm {
+    width: 100%;
+    padding: 0.3rem 0.4rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+}
+
+/* Für sehr kleine Bildschirme */
+@media (max-width: 480px) {
+  .admin-table {
+    min-width: 650px;
+  }
+
+  /* Kompaktere Zellen */
+  .admin-table th,
+  .admin-table td {
+    padding: 0.5rem 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  /* Beschreibung kürzen */
+  .admin-table small {
+    display: block;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Visueller Hinweis für Scrollbarkeit */
+.table-responsive {
+  position: relative;
+}
+
+/* Scrollbar sichtbarer machen */
+.table-responsive::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  background: var(--clr-surface-a20);
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  background: var(--clr-accent);
+  border-radius: 4px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: var(--clr-primary-a20);
+}
+
+/* Optional: Scroll-Indikator für bessere UX */
+@media (max-width: 768px) {
+  .table-responsive::after {
+    content: "→ Horizontal scrollen";
+    position: absolute;
+    bottom: -20px;
+    right: 0;
+    font-size: 0.7rem;
+    color: var(--clr-primary-a40);
+    opacity: 0.7;
+  }
+
+  /* Verstecke Indikator wenn gescrollt wird */
+  .table-responsive.scrolled::after {
+    display: none;
+  }
+}
+
+/* ================================================
+   FILTER BAR - DESKTOP & MOBILE
+   ================================================ */
+
+/* Desktop Layout */
+.filter-bar form {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-bar .form-control,
+.filter-bar select {
+  width: 200px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Mobile Layout */
+@media (max-width: 768px) {
+  .filter-bar {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    background: var(--clr-surface-a10);
+    border-radius: var(--radius-md);
+  }
+
+  .filter-bar form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  /* Inputs volle Breite */
+  .filter-bar .form-control,
+  .filter-bar select,
+  .filter-bar input[type="date"] {
+    width: 100% !important;
+    margin: 0;
+    padding: 0.875rem;
+    font-size: 16px; /* Verhindert Zoom auf iOS */
+  }
+
+  /* Button-Container für die beiden Action-Buttons */
+  .filter-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .filter-buttons .btn {
+    width: 100%;
+    padding: 0.875rem;
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* Primär-Button etwas hervorgehoben */
+  .filter-buttons .btn-primary {
+    order: -1; /* Filtern-Button zuerst */
+    font-weight: 600;
+  }
+
+  .filter-buttons .btn:not(.btn-primary) {
+    background: var(--clr-surface-a20);
+    border-color: var(--clr-surface-a30);
+  }
+}
+
+/* Für sehr kleine Bildschirme */
+@media (max-width: 480px) {
+  .filter-bar {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .filter-bar form {
+    gap: 0.5rem;
+  }
+
+  .filter-buttons {
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+  }
+
+  .filter-buttons .btn {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+  }
+}

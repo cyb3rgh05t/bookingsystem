@@ -58,7 +58,7 @@ $services = $db->fetchAll("SELECT * FROM services ORDER BY name");
     <link rel="stylesheet" href="../assets/css/theme.css">
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
-    <link rel="stylesheet" href="../assets/css/mobile.css">
+    <link rel="stylesheet" href="../assets/css/admin-mobile.css">
 </head>
 
 <body>
@@ -77,6 +77,7 @@ $services = $db->fetchAll("SELECT * FROM services ORDER BY name");
             <a href="logout.php" class="sidebar-link" style="margin-top: 2rem; color: var(--clr-error);">
                 Abmelden
             </a>
+            <a href="../index.php" class="sidebar-link">zum Termin Planner</a>
         </nav>
     </div>
 
@@ -135,68 +136,70 @@ $services = $db->fetchAll("SELECT * FROM services ORDER BY name");
                     Noch keine Services vorhanden. Fügen Sie oben einen neuen Service hinzu.
                 </p>
             <?php else: ?>
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Preis</th>
-                            <th>Dauer</th>
-                            <th>Status</th>
-                            <th>Aktionen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($services as $service): ?>
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
                             <tr>
-                                <td>
-                                    <strong><?php echo htmlspecialchars($service['name']); ?></strong>
-                                    <?php if (!empty($service['description'])): ?>
-                                        <br>
-                                        <small style="color: var(--clr-primary-a40);">
-                                            <?php echo htmlspecialchars($service['description']); ?>
-                                        </small>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo number_format($service['price'], 2, ',', '.'); ?> €</td>
-                                <td><?php echo $service['duration_minutes']; ?> Min.</td>
-                                <td>
-                                    <?php if ($service['is_active']): ?>
-                                        <span style="color: var(--clr-success);">✓ Aktiv</span>
-                                    <?php else: ?>
-                                        <span style="color: var(--clr-error);">✗ Inaktiv</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="action" value="toggle">
-                                            <input type="hidden" name="service_id" value="<?php echo $service['id']; ?>">
-                                            <button type="submit" class="btn btn-warning btn-sm">
-                                                <?php echo $service['is_active'] ? 'Deaktivieren' : 'Aktivieren'; ?>
-                                            </button>
-                                        </form>
-
-                                        <button onclick="editService(<?php echo htmlspecialchars(json_encode($service)); ?>)"
-                                            class="btn btn-primary btn-sm">
-                                            Bearbeiten
-                                        </button>
-
-                                        <?php if ($service['id'] > 0): // Nur selbst erstellte Services löschen 
-                                        ?>
-                                            <form method="POST" style="display: inline;" onsubmit="return confirm('Service wirklich löschen?');">
-                                                <input type="hidden" name="action" value="delete">
+                                <th>Name</th>
+                                <th>Preis</th>
+                                <th>Dauer</th>
+                                <th>Status</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($services as $service): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?php echo htmlspecialchars($service['name']); ?></strong>
+                                        <?php if (!empty($service['description'])): ?>
+                                            <br>
+                                            <small style="color: var(--clr-primary-a40);">
+                                                <?php echo htmlspecialchars($service['description']); ?>
+                                            </small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?php echo number_format($service['price'], 2, ',', '.'); ?> €</td>
+                                    <td><?php echo $service['duration_minutes']; ?> Min.</td>
+                                    <td>
+                                        <?php if ($service['is_active']): ?>
+                                            <span style="color: var(--clr-success);">✓ Aktiv</span>
+                                        <?php else: ?>
+                                            <span style="color: var(--clr-error);">✗ Inaktiv</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="action" value="toggle">
                                                 <input type="hidden" name="service_id" value="<?php echo $service['id']; ?>">
-                                                <button type="submit" class="btn btn-danger btn-sm">
-                                                    Löschen
+                                                <button type="submit" class="btn btn-warning btn-sm">
+                                                    <?php echo $service['is_active'] ? 'Deaktivieren' : 'Aktivieren'; ?>
                                                 </button>
                                             </form>
-                                        <?php endif; ?>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+
+                                            <button onclick="editService(<?php echo htmlspecialchars(json_encode($service)); ?>)"
+                                                class="btn btn-primary btn-sm">
+                                                Bearbeiten
+                                            </button>
+
+                                            <?php if ($service['id'] > 0): // Nur selbst erstellte Services löschen 
+                                            ?>
+                                                <form method="POST" style="display: inline;" onsubmit="return confirm('Service wirklich löschen?');">
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="service_id" value="<?php echo $service['id']; ?>">
+                                                    <button type="submit" class="btn btn-danger btn-sm">
+                                                        Löschen
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -249,43 +252,38 @@ $services = $db->fetchAll("SELECT * FROM services ORDER BY name");
     </div>
 
     <script>
+        // Verbesserte Sidebar-Funktionalität
         function toggleSidebar() {
             const sidebar = document.getElementById('adminSidebar');
-            sidebar.classList.toggle('active');
-        }
+            const isActive = sidebar.classList.contains('active');
 
-        // NEU: Touch-Optimierung hinzufügen
-        if ('ontouchstart' in window) {
-            document.addEventListener('DOMContentLoaded', function() {
-                document.body.classList.add('touch-device');
-
-                // Verbessere Touch-Feedback
-                document.querySelectorAll('.btn, .time-slot, .calendar-day').forEach(el => {
-                    el.addEventListener('touchstart', function() {
-                        this.classList.add('touch-active');
-                    });
-                    el.addEventListener('touchend', function() {
-                        setTimeout(() => this.classList.remove('touch-active'), 100);
-                    });
-                });
-            });
-        }
-
-        // NEU: Sidebar schließen bei Klick außerhalb
-        function closeSidebarOutside(e) {
-            const sidebar = document.getElementById('adminSidebar');
-            const toggle = document.querySelector('.mobile-menu-toggle');
-
-            if (sidebar && toggle && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+            if (!isActive) {
+                sidebar.classList.add('active');
+                // Füge Event-Listener für Klick außerhalb hinzu
+                document.addEventListener('click', closeSidebarOnClickOutside);
+            } else {
                 sidebar.classList.remove('active');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
             }
         }
 
-        // Füge Event Listener hinzu wenn Sidebar geöffnet wird
-        document.addEventListener('click', function(e) {
+        function closeSidebarOnClickOutside(e) {
             const sidebar = document.getElementById('adminSidebar');
-            if (sidebar && sidebar.classList.contains('active')) {
-                closeSidebarOutside(e);
+            const toggle = document.querySelector('.mobile-menu-toggle');
+
+            if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
+            }
+        }
+
+        // ESC-Taste schließt Sidebar
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const sidebar = document.getElementById('adminSidebar');
+                if (sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
             }
         });
 
@@ -311,6 +309,44 @@ $services = $db->fetchAll("SELECT * FROM services ORDER BY name");
                 closeEditModal();
             }
         }
+
+        // Verbesserte Tabellen-Scroll-Funktionalität
+        document.addEventListener('DOMContentLoaded', function() {
+            const tableResponsive = document.querySelector('.table-responsive');
+
+            if (tableResponsive) {
+                // Entferne Scroll-Indikator nach erstem Scroll
+                tableResponsive.addEventListener('scroll', function() {
+                    this.classList.add('scrolled');
+                }, {
+                    once: true
+                });
+
+                // Optional: Zeige visuellen Hinweis dass Tabelle scrollbar ist
+                const table = tableResponsive.querySelector('.admin-table');
+                if (table && table.scrollWidth > tableResponsive.clientWidth) {
+                    // Tabelle ist breiter als Container - scrollbar
+                    tableResponsive.style.boxShadow = 'inset -10px 0 10px -10px rgba(0,0,0,0.3)';
+
+                    // Update shadow beim Scrollen
+                    tableResponsive.addEventListener('scroll', function() {
+                        const maxScroll = this.scrollWidth - this.clientWidth;
+                        const currentScroll = this.scrollLeft;
+
+                        if (currentScroll === 0) {
+                            // Am Anfang
+                            this.style.boxShadow = 'inset -10px 0 10px -10px rgba(0,0,0,0.3)';
+                        } else if (currentScroll >= maxScroll - 1) {
+                            // Am Ende
+                            this.style.boxShadow = 'inset 10px 0 10px -10px rgba(0,0,0,0.3)';
+                        } else {
+                            // In der Mitte
+                            this.style.boxShadow = 'inset -10px 0 10px -10px rgba(0,0,0,0.3), inset 10px 0 10px -10px rgba(0,0,0,0.3)';
+                        }
+                    });
+                }
+            }
+        });
     </script>
 </body>
 

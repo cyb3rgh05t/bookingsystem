@@ -83,7 +83,7 @@ function safe_html($value)
     <link rel="stylesheet" href="../assets/css/theme.css">
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
-    <link rel="stylesheet" href="../assets/css/mobile.css">
+    <link rel="stylesheet" href="../assets/css/admin-mobile.css">
 </head>
 
 <body>
@@ -101,6 +101,7 @@ function safe_html($value)
             <a href="logout.php" class="sidebar-link" style="margin-top: 2rem; color: var(--clr-error);">
                 Abmelden
             </a>
+            <a href="../index.php" class="sidebar-link">zum Termin Planner</a>
         </nav>
     </div>
 
@@ -317,52 +318,47 @@ function safe_html($value)
             </div>
 
             <div style="display: flex; gap: 1rem;">
-                <button type="submit" class="btn btn-primary btn-large">Einstellungen speichern</button>
+                <button type="submit" class="btn btn-primary btn-large">Speichern</button>
                 <button type="button" class="btn" onclick="if(confirm('Alle Einstellungen auf Standardwerte zurücksetzen?')) resetToDefaults()">
-                    Auf Standard zurücksetzen
+                    Reset
                 </button>
             </div>
         </form>
     </div>
 
     <script>
+        // Verbesserte Sidebar-Funktionalität
         function toggleSidebar() {
             const sidebar = document.getElementById('adminSidebar');
-            sidebar.classList.toggle('active');
-        }
+            const isActive = sidebar.classList.contains('active');
 
-        // NEU: Touch-Optimierung hinzufügen
-        if ('ontouchstart' in window) {
-            document.addEventListener('DOMContentLoaded', function() {
-                document.body.classList.add('touch-device');
-
-                // Verbessere Touch-Feedback
-                document.querySelectorAll('.btn, .time-slot, .calendar-day').forEach(el => {
-                    el.addEventListener('touchstart', function() {
-                        this.classList.add('touch-active');
-                    });
-                    el.addEventListener('touchend', function() {
-                        setTimeout(() => this.classList.remove('touch-active'), 100);
-                    });
-                });
-            });
-        }
-
-        // NEU: Sidebar schließen bei Klick außerhalb
-        function closeSidebarOutside(e) {
-            const sidebar = document.getElementById('adminSidebar');
-            const toggle = document.querySelector('.mobile-menu-toggle');
-
-            if (sidebar && toggle && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+            if (!isActive) {
+                sidebar.classList.add('active');
+                // Füge Event-Listener für Klick außerhalb hinzu
+                document.addEventListener('click', closeSidebarOnClickOutside);
+            } else {
                 sidebar.classList.remove('active');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
             }
         }
 
-        // Füge Event Listener hinzu wenn Sidebar geöffnet wird
-        document.addEventListener('click', function(e) {
+        function closeSidebarOnClickOutside(e) {
             const sidebar = document.getElementById('adminSidebar');
-            if (sidebar && sidebar.classList.contains('active')) {
-                closeSidebarOutside(e);
+            const toggle = document.querySelector('.mobile-menu-toggle');
+
+            if (!sidebar.contains(e.target) && !toggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
+            }
+        }
+
+        // ESC-Taste schließt Sidebar
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const sidebar = document.getElementById('adminSidebar');
+                if (sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
             }
         });
 

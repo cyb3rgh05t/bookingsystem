@@ -68,83 +68,16 @@ $blocked = $db->fetchAll("
     <link rel="stylesheet" href="../assets/css/theme.css">
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
-    <link rel="stylesheet" href="../assets/css/mobile.css">
-    <style>
-        .admin-sidebar {
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 250px;
-            background: var(--clr-surface-tonal-a0);
-            padding: 2rem 0;
-            overflow-y: auto;
-        }
-
-        .admin-content {
-            margin-left: 250px;
-            padding: 2rem;
-        }
-
-        .sidebar-link {
-            display: block;
-            padding: 1rem 1.5rem;
-            color: var(--clr-primary-a30);
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .sidebar-link:hover,
-        .sidebar-link.active {
-            background: var(--clr-surface-a20);
-            color: var(--clr-primary-a0);
-        }
-
-        .calendar-admin {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 1px;
-            background: var(--clr-surface-a30);
-            border: 1px solid var(--clr-surface-a30);
-        }
-
-        .calendar-cell {
-            background: var(--clr-surface-a10);
-            padding: 0.5rem;
-            min-height: 80px;
-            position: relative;
-        }
-
-        .calendar-cell-header {
-            font-weight: bold;
-            text-align: center;
-            padding: 1rem;
-            background: var(--clr-surface-a20);
-        }
-
-        .day-number {
-            font-weight: bold;
-            margin-bottom: 0.25rem;
-        }
-
-        .appointment-count {
-            font-size: 0.75rem;
-            color: var(--clr-info);
-        }
-
-        .blocked-indicator {
-            font-size: 0.75rem;
-            color: var(--clr-error);
-        }
-    </style>
+    <link rel="stylesheet" href="../assets/css/admin-mobile.css">
 </head>
 
 <body>
+    <!-- Mobile Menu Toggle -->
     <button class="mobile-menu-toggle" onclick="toggleSidebar()">☰</button>
-    <div class="admin-sidebar">
-        <h2 style="padding: 0 1.5rem; margin-bottom: 2rem; color: var(--clr-primary-a0);">
-            Admin Panel
-        </h2>
+
+    <!-- Sidebar - WICHTIG: id="adminSidebar" hinzugefügt! -->
+    <div class="admin-sidebar" id="adminSidebar">
+        <h2>Admin Panel</h2>
         <nav>
             <a href="index.php" class="sidebar-link">Dashboard</a>
             <a href="appointments.php" class="sidebar-link">Termine</a>
@@ -154,6 +87,7 @@ $blocked = $db->fetchAll("
             <a href="logout.php" class="sidebar-link" style="margin-top: 2rem; color: var(--clr-error);">
                 Abmelden
             </a>
+            <a href="../index.php" class="sidebar-link">zum Termin Planner</a>
         </nav>
     </div>
 
@@ -165,21 +99,21 @@ $blocked = $db->fetchAll("
         <?php endif; ?>
 
         <!-- Month Navigation -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <a href="?month=<?php echo date('Y-m', strtotime($month . ' -1 month')); ?>" class="btn">← Vorheriger Monat</a>
+        <div class="calendar-nav">
+            <a href="?month=<?php echo date('Y-m', strtotime($month . ' -1 month')); ?>" class="btn">←</a>
             <h2><?php echo date('F Y', $monthTime); ?></h2>
-            <a href="?month=<?php echo date('Y-m', strtotime($month . ' +1 month')); ?>" class="btn">Nächster Monat →</a>
+            <a href="?month=<?php echo date('Y-m', strtotime($month . ' +1 month')); ?>" class="btn">→</a>
         </div>
 
         <!-- Calendar Grid -->
         <div class="calendar-admin">
-            <div class="calendar-cell-header">So</div>
-            <div class="calendar-cell-header">Mo</div>
-            <div class="calendar-cell-header">Di</div>
-            <div class="calendar-cell-header">Mi</div>
-            <div class="calendar-cell-header">Do</div>
-            <div class="calendar-cell-header">Fr</div>
-            <div class="calendar-cell-header">Sa</div>
+            <div class="calendar-cell-header" data-short="So">So</div>
+            <div class="calendar-cell-header" data-short="Mo">Mo</div>
+            <div class="calendar-cell-header" data-short="Di">Di</div>
+            <div class="calendar-cell-header" data-short="Mi">Mi</div>
+            <div class="calendar-cell-header" data-short="Do">Do</div>
+            <div class="calendar-cell-header" data-short="Fr">Fr</div>
+            <div class="calendar-cell-header" data-short="Sa">Sa</div>
 
             <?php
             // Empty cells before first day
@@ -262,45 +196,47 @@ $blocked = $db->fetchAll("
         <div class="card" style="margin-top: 2rem;">
             <h3 style="margin-bottom: 1.5rem;">Blockierte Zeiten</h3>
 
-            <table style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="border-bottom: 1px solid var(--clr-surface-a30);">
-                        <th style="padding: 1rem; text-align: left;">Datum</th>
-                        <th style="padding: 1rem; text-align: left;">Zeit</th>
-                        <th style="padding: 1rem; text-align: left;">Grund</th>
-                        <th style="padding: 1rem; text-align: left;">Aktionen</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($blocked as $block): ?>
-                        <tr style="border-bottom: 1px solid var(--clr-surface-a20);">
-                            <td style="padding: 1rem;">
-                                <?php echo date('d.m.Y', strtotime($block['date'])); ?>
-                            </td>
-                            <td style="padding: 1rem;">
-                                <?php
-                                if ($block['is_full_day']) {
-                                    echo 'Ganzer Tag';
-                                } else {
-                                    echo $block['start_time'] . ' - ' . $block['end_time'];
-                                }
-                                ?>
-                            </td>
-                            <td style="padding: 1rem;">
-                                <?php echo htmlspecialchars($block['reason'] ?: '-'); ?>
-                            </td>
-                            <td style="padding: 1rem;">
-                                <form method="POST" style="display: inline;">
-                                    <input type="hidden" name="block_id" value="<?php echo $block['id']; ?>">
-                                    <button type="submit" name="unblock" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
-                                        Aufheben
-                                    </button>
-                                </form>
-                            </td>
+            <div class="table-responsive">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Zeit</th>
+                            <th>Grund</th>
+                            <th>Aktionen</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($blocked as $block): ?>
+                            <tr>
+                                <td>
+                                    <?php echo date('d.m.Y', strtotime($block['date'])); ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    if ($block['is_full_day']) {
+                                        echo 'Ganzer Tag';
+                                    } else {
+                                        echo $block['start_time'] . ' - ' . $block['end_time'];
+                                    }
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php echo htmlspecialchars($block['reason'] ?: '-'); ?>
+                                </td>
+                                <td>
+                                    <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="block_id" value="<?php echo $block['id']; ?>">
+                                        <button type="submit" name="unblock" class="btn btn-danger btn-sm">
+                                            Aufheben
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
 
             <?php if (empty($blocked)): ?>
                 <p style="text-align: center; padding: 2rem; color: var(--clr-primary-a40);">
@@ -328,43 +264,41 @@ $blocked = $db->fetchAll("
             }
         }
 
+        // Verbesserte Sidebar-Funktionalität
         function toggleSidebar() {
             const sidebar = document.getElementById('adminSidebar');
-            sidebar.classList.toggle('active');
+            const isActive = sidebar.classList.contains('active');
+
+            if (!isActive) {
+                sidebar.classList.add('active');
+                // Füge Event-Listener für Klick außerhalb hinzu
+                setTimeout(() => {
+                    document.addEventListener('click', closeSidebarOnClickOutside);
+                }, 100);
+            } else {
+                sidebar.classList.remove('active');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
+            }
         }
 
-        // NEU: Touch-Optimierung hinzufügen
-        if ('ontouchstart' in window) {
-            document.addEventListener('DOMContentLoaded', function() {
-                document.body.classList.add('touch-device');
-
-                // Verbessere Touch-Feedback
-                document.querySelectorAll('.btn, .time-slot, .calendar-day').forEach(el => {
-                    el.addEventListener('touchstart', function() {
-                        this.classList.add('touch-active');
-                    });
-                    el.addEventListener('touchend', function() {
-                        setTimeout(() => this.classList.remove('touch-active'), 100);
-                    });
-                });
-            });
-        }
-
-        // NEU: Sidebar schließen bei Klick außerhalb
-        function closeSidebarOutside(e) {
+        function closeSidebarOnClickOutside(e) {
             const sidebar = document.getElementById('adminSidebar');
             const toggle = document.querySelector('.mobile-menu-toggle');
 
             if (sidebar && toggle && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
                 sidebar.classList.remove('active');
+                document.removeEventListener('click', closeSidebarOnClickOutside);
             }
         }
 
-        // Füge Event Listener hinzu wenn Sidebar geöffnet wird
-        document.addEventListener('click', function(e) {
-            const sidebar = document.getElementById('adminSidebar');
-            if (sidebar && sidebar.classList.contains('active')) {
-                closeSidebarOutside(e);
+        // ESC-Taste schließt Sidebar
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const sidebar = document.getElementById('adminSidebar');
+                if (sidebar && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                    document.removeEventListener('click', closeSidebarOnClickOutside);
+                }
             }
         });
     </script>
