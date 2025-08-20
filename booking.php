@@ -11,7 +11,7 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <title><?php echo SITE_NAME; ?> - Terminbuchung</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,6 +19,7 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
     <link rel="stylesheet" href="assets/css/theme.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/print.css">
+    <link rel="stylesheet" href="assets/css/mobile.css">
 </head>
 
 <body>
@@ -30,9 +31,7 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
                     <img src="assets/images/logo.png" alt="Logo" onerror="this.style.display='none'">
                     <h1><?php echo htmlspecialchars($settings['company_name'] ?? 'Auto Service'); ?></h1>
                 </a>
-                <nav>
-                    <a href="admin/login.php" class="btn">Admin</a>
-                </nav>
+
             </div>
         </div>
     </header>
@@ -102,14 +101,17 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
 
                     <div class="form-group">
                         <label class="form-label">Adresse *</label>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" class="form-control" id="address" placeholder="Straße Nr, PLZ Ort" required style="flex: 1;">
-                            <button type="button" class="btn btn-primary" onclick="calculateDistanceFromInput()" title="Entfernung berechnen">
+                        <div class="address-input-group">
+                            <div class="address-input-wrapper">
+                                <input type="text" id="address" class="form-control" required>
+                            </div>
+                            <button type="button" onclick="calculateDistanceFromInput()" class="btn btn-primary">
                                 📍 Berechnen
                             </button>
                         </div>
                         <span class="form-error" style="display:none;">Bitte vollständige Adresse eingeben</span>
                     </div>
+
 
                     <div id="distance-info" class="alert alert-info" style="display:none;">
                         <span id="distance-text"></span>

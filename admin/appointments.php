@@ -52,11 +52,12 @@ $appointments = $db->fetchAll($query, $params);
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <title>Terminverwaltung - Admin</title>
     <link rel="stylesheet" href="../assets/css/theme.css">
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
+    <link rel="stylesheet" href="../assets/css/mobile.css">
     <style>
         .admin-sidebar {
             position: fixed;
@@ -257,6 +258,41 @@ $appointments = $db->fetchAll($query, $params);
             const sidebar = document.getElementById('adminSidebar');
             sidebar.classList.toggle('active');
         }
+
+        // NEU: Touch-Optimierung hinzufügen
+        if ('ontouchstart' in window) {
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.classList.add('touch-device');
+
+                // Verbessere Touch-Feedback
+                document.querySelectorAll('.btn, .time-slot, .calendar-day').forEach(el => {
+                    el.addEventListener('touchstart', function() {
+                        this.classList.add('touch-active');
+                    });
+                    el.addEventListener('touchend', function() {
+                        setTimeout(() => this.classList.remove('touch-active'), 100);
+                    });
+                });
+            });
+        }
+
+        // NEU: Sidebar schließen bei Klick außerhalb
+        function closeSidebarOutside(e) {
+            const sidebar = document.getElementById('adminSidebar');
+            const toggle = document.querySelector('.mobile-menu-toggle');
+
+            if (sidebar && toggle && !sidebar.contains(e.target) && !toggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+            }
+        }
+
+        // Füge Event Listener hinzu wenn Sidebar geöffnet wird
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('adminSidebar');
+            if (sidebar && sidebar.classList.contains('active')) {
+                closeSidebarOutside(e);
+            }
+        });
     </script>
 </body>
 

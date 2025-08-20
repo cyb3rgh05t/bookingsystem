@@ -602,7 +602,7 @@ h3 {
 
 /* Alerts - Minimalist Style */
 .alert {
-  padding: 1rem 1.5rem;
+  padding: 1rem 1rem;
   border-radius: var(--radius-xs);
   margin-bottom: 1.5rem;
   display: flex;
@@ -610,7 +610,7 @@ h3 {
   gap: 1rem;
   background: transparent;
   border: 1px solid;
-  font-size: 0.875rem;
+  font-size: 0.7rem;
   letter-spacing: 0.03em;
 }
 

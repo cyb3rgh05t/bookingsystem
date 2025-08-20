@@ -23,7 +23,7 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <title><?php echo htmlspecialchars($settings['company_name'] ?? 'Auto Service'); ?> - Willkommen</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,6 +32,7 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/theme.css">
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/mobile.css">
     <style>
         .hero {
             min-height: auto;
