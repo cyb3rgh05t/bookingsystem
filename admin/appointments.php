@@ -24,9 +24,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
 $filter_status = $_GET['status'] ?? '';
 $filter_date = $_GET['date'] ?? '';
 
-// Build query
+// Build query - WICHTIG: c.address wurde hinzugefügt!
 $query = "
-SELECT a.*, c.first_name, c.last_name, c.email, c.phone
+SELECT a.*, 
+       c.first_name, 
+       c.last_name, 
+       c.email, 
+       c.phone,
+       c.address,
+       c.car_brand,
+       c.car_model,
+       c.car_year,
+       c.license_plate
 FROM appointments a
 JOIN customers c ON a.customer_id = c.id
 WHERE 1=1
@@ -54,17 +63,14 @@ $appointments = $db->fetchAll($query, $params);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <title>Terminverwaltung - Admin</title>
-    <link rel="stylesheet" href="../assets/css/theme.css">
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css">
-    <link rel="stylesheet" href="../assets/css/admin-mobile.css">
+    <link rel="stylesheet" href="../assets/css/admin.min.css">
 </head>
 
 <body>
     <!-- Mobile Menu Toggle -->
     <button class="mobile-menu-toggle" onclick="toggleSidebar()">☰</button>
 
-    <!-- Sidebar - WICHTIG: id="adminSidebar" hinzugefügt! -->
+    <!-- Sidebar -->
     <div class="admin-sidebar" id="adminSidebar">
         <h2>Admin Panel</h2>
         <nav>
@@ -116,6 +122,8 @@ $appointments = $db->fetchAll($query, $params);
                             <th>ID</th>
                             <th>Kunde</th>
                             <th>Kontakt</th>
+                            <th>Adresse</th>
+                            <th>Fahrzeug</th>
                             <th>Datum/Zeit</th>
                             <th>Services</th>
                             <th>Betrag</th>
@@ -135,24 +143,49 @@ $appointments = $db->fetchAll($query, $params);
                                     <small><?php echo htmlspecialchars($appointment['phone']); ?></small>
                                 </td>
                                 <td>
+                                    <?php
+                                    // Sichere Anzeige der Adresse mit Fallback
+                                    echo htmlspecialchars($appointment['address'] ?? 'Keine Adresse angegeben');
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php if (!empty($appointment['car_brand']) || !empty($appointment['car_model'])): ?>
+                                        <small>
+                                            <?php echo htmlspecialchars($appointment['car_brand'] ?? ''); ?>
+                                            <?php echo htmlspecialchars($appointment['car_model'] ?? ''); ?><br>
+                                            <?php if (!empty($appointment['car_year'])): ?>
+                                                Jahr: <?php echo htmlspecialchars($appointment['car_year']); ?><br>
+                                            <?php endif; ?>
+                                            <?php if (!empty($appointment['license_plate'])): ?>
+                                                <?php echo htmlspecialchars($appointment['license_plate']); ?>
+                                            <?php endif; ?>
+                                        </small>
+                                    <?php else: ?>
+                                        <small style="color: var(--clr-primary-a40);">-</small>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <?php echo date('d.m.Y', strtotime($appointment['appointment_date'])); ?><br>
                                     <strong><?php echo $appointment['appointment_time']; ?></strong>
                                 </td>
                                 <td>
                                     <?php
                                     $services = $db->fetchAll("
-                                    SELECT s.name 
-                                    FROM appointment_services aps
-                                    JOIN services s ON aps.service_id = s.id
-                                    WHERE aps.appointment_id = ?
-                                ", [$appointment['id']]);
+                                        SELECT s.name 
+                                        FROM appointment_services aps
+                                        JOIN services s ON aps.service_id = s.id
+                                        WHERE aps.appointment_id = ?
+                                    ", [$appointment['id']]);
                                     foreach ($services as $service) {
                                         echo htmlspecialchars($service['name']) . '<br>';
                                     }
                                     ?>
                                 </td>
                                 <td>
-                                    <strong><?php echo number_format($appointment['total_price'], 2); ?>€</strong>
+                                    <strong><?php echo number_format($appointment['total_price'], 2, ',', '.'); ?>€</strong>
+                                    <?php if ($appointment['distance_km'] > 0): ?>
+                                        <br><small><?php echo number_format($appointment['distance_km'], 1, ',', '.'); ?> km</small>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <span class="status-badge status-<?php echo $appointment['status']; ?>">
@@ -163,7 +196,7 @@ $appointments = $db->fetchAll($query, $params);
                                             'completed' => 'Abgeschlossen',
                                             'cancelled' => 'Storniert'
                                         ];
-                                        echo $statusLabels[$appointment['status']];
+                                        echo $statusLabels[$appointment['status']] ?? $appointment['status'];
                                         ?>
                                     </span>
                                 </td>

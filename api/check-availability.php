@@ -19,6 +19,9 @@ try {
     $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
     $slotDuration = intval($settings['time_slot_duration'] ?? 30);
 
+    // PUFFER-ZEIT DEFINIEREN (30 Minuten vor und nach jedem Termin)
+    $bufferTime = intval($settings['appointment_buffer_time'] ?? 30); // Minuten aus Einstellungen
+
     // Get day of week
     $dayOfWeek = date('w', strtotime($date));
 
@@ -80,22 +83,39 @@ try {
         }
     }
 
-    // Build array of busy time ranges
+    // Build array of busy time ranges WITH BUFFER
     $busyRanges = [];
 
-    // Add appointments to busy ranges
+    // Add appointments to busy ranges WITH BUFFER TIME
     foreach ($appointments as $apt) {
         $startMin = timeToMinutes($apt['appointment_time']);
         $endMin = $startMin + intval($apt['total_duration']);
-        $busyRanges[] = ['start' => $startMin, 'end' => $endMin];
+
+        // ADD BUFFER: 30 minutes before and after
+        $bufferedStart = $startMin - $bufferTime;
+        $bufferedEnd = $endMin + $bufferTime;
+
+        $busyRanges[] = [
+            'start' => $bufferedStart,
+            'end' => $bufferedEnd,
+            'actualStart' => $startMin,  // Keep track of actual appointment time
+            'actualEnd' => $endMin,      // for display purposes
+            'type' => 'appointment'
+        ];
     }
 
-    // Add manual blocks to busy ranges
+    // Add manual blocks to busy ranges (these don't need buffer)
     foreach ($blocked as $block) {
         if (!$block['is_full_day']) {
             $startMin = timeToMinutes($block['start_time']);
             $endMin = timeToMinutes($block['end_time']);
-            $busyRanges[] = ['start' => $startMin, 'end' => $endMin];
+            $busyRanges[] = [
+                'start' => $startMin,
+                'end' => $endMin,
+                'actualStart' => $startMin,
+                'actualEnd' => $endMin,
+                'type' => 'blocked'
+            ];
         }
     }
 
@@ -114,6 +134,9 @@ try {
             if ($range['start'] <= $mergedRanges[$lastIndex]['end']) {
                 // Overlapping, merge them
                 $mergedRanges[$lastIndex]['end'] = max($mergedRanges[$lastIndex]['end'], $range['end']);
+                // Keep track of the earliest actual start and latest actual end
+                $mergedRanges[$lastIndex]['actualStart'] = min($mergedRanges[$lastIndex]['actualStart'], $range['actualStart']);
+                $mergedRanges[$lastIndex]['actualEnd'] = max($mergedRanges[$lastIndex]['actualEnd'], $range['actualEnd']);
             } else {
                 // Not overlapping, add as new range
                 $mergedRanges[] = $range;
@@ -179,34 +202,63 @@ try {
         }
     }
 
-    // Return result
-    if (empty($availableSlots)) {
-        // No available slots for the requested duration
-        echo json_encode([
-            'available' => false,
-            'slots' => [],
-            'message' => 'An diesem Tag ist nicht genügend Zeit für die gewählten Services verfügbar. Bitte wählen Sie einen anderen Tag.',
-            'busyRanges' => array_map(function ($r) {
-                return minutesToTime($r['start']) . '-' . minutesToTime($r['end']);
-            }, $mergedRanges)
-        ]);
-    } else {
-        // Return all time slots, marking which ones are NOT available
-        $allSlots = [];
-        $slotTime = $workStartMin;
-        while ($slotTime < $workEndMin) {
-            $timeStr = minutesToTime($slotTime);
-            $allSlots[] = [
-                'time' => $timeStr,
-                'available' => in_array($timeStr, $availableSlots)
-            ];
-            $slotTime += $slotDuration;
+    // Build detailed slot information for display
+    $allSlots = [];
+    $slotTime = $workStartMin;
+
+    while ($slotTime < $workEndMin) {
+        $timeStr = minutesToTime($slotTime);
+        $slotEndTime = $slotTime + $requestedDuration;
+
+        // Check if this slot is available
+        $isAvailable = in_array($timeStr, $availableSlots);
+        $reason = '';
+
+        if (!$isAvailable) {
+            // Find out why it's not available
+            if ($slotEndTime > $workEndMin) {
+                $reason = 'Überschreitet Arbeitszeit';
+            } else {
+                // Check which busy range blocks this slot
+                foreach ($mergedRanges as $busy) {
+                    if ($slotTime < $busy['end'] && $slotEndTime > $busy['start']) {
+                        if ($busy['type'] === 'appointment') {
+                            // Show the actual appointment time (without buffer)
+                            $actualStart = minutesToTime($busy['actualStart']);
+                            $actualEnd = minutesToTime($busy['actualEnd']);
+                            $reason = "Termin: {$actualStart}-{$actualEnd} (inkl. Puffer)";
+                        } else {
+                            $reason = "Blockiert: " . minutesToTime($busy['actualStart']) . "-" . minutesToTime($busy['actualEnd']);
+                        }
+                        break;
+                    }
+                }
+            }
         }
 
+        $allSlots[] = [
+            'time' => $timeStr,
+            'available' => $isAvailable,
+            'reason' => $reason
+        ];
+
+        $slotTime += $slotDuration;
+    }
+
+    // Return result
+    if (empty($availableSlots)) {
+        echo json_encode([
+            'available' => false,
+            'slots' => $allSlots,
+            'message' => 'An diesem Tag ist nicht genügend Zeit für die gewählten Services verfügbar.',
+            'info' => "Hinweis: Wir planen 30 Minuten Puffer vor und nach jedem Termin ein."
+        ]);
+    } else {
         echo json_encode([
             'available' => true,
             'slots' => $allSlots,
-            'message' => count($availableSlots) . ' Termine verfügbar'
+            'message' => count($availableSlots) . ' Termine verfügbar',
+            'info' => "Hinweis: Wir planen 30 Minuten Puffer vor und nach jedem Termin ein."
         ]);
     }
 } catch (Exception $e) {

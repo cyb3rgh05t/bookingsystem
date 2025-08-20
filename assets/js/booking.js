@@ -508,6 +508,7 @@ function selectDate(dateStr) {
 }
 
 // Load available time slots
+// Load available time slots
 async function loadTimeSlots(date) {
   const dateObj = new Date(date + "T00:00:00");
   const dayOfWeek = dateObj.getDay();
@@ -567,61 +568,128 @@ async function loadTimeSlots(date) {
     if (!result.available) {
       // No slots available for this duration
       container.innerHTML = `
-                <div class="alert alert-warning" style="grid-column: 1 / -1;">
-                    <strong>Keine passenden Termine verfügbar</strong><br>
-                    ${
-                      result.message ||
-                      "An diesem Tag ist nicht genügend zusammenhängende Zeit für Ihre gewählten Services verfügbar."
-                    }
-                    <br><br>
-                    <small>Benötigte Zeit: ${totalDuration} Minuten<br>
-                    Bitte wählen Sie einen anderen Tag.</small>
-                </div>
-            `;
+        <div class="alert alert-warning" style="grid-column: 1 / -1;">
+          <strong>Keine passenden Termine verfügbar</strong><br>
+          ${
+            result.message ||
+            "An diesem Tag ist nicht genügend zusammenhängende Zeit für Ihre gewählten Services verfügbar."
+          }
+          <br><br>
+          ${result.info ? `<small>${result.info}</small><br>` : ""}
+          <small>Benötigte Zeit: ${totalDuration} Minuten (+ Vor-/Nachbereitungszeit)<br>
+          Bitte wählen Sie einen anderen Tag.</small>
+        </div>
+      `;
 
       // Disable continue button
       document.getElementById("time-continue").disabled = true;
     } else if (result.blocked === "all") {
       // Entire day is blocked
       container.innerHTML = `
-                <div class="alert alert-error" style="grid-column: 1 / -1;">
-                    ${result.message || "Dieser Tag ist nicht verfügbar"}
-                </div>
-            `;
+        <div class="alert alert-error" style="grid-column: 1 / -1;">
+          ${result.message || "Dieser Tag ist nicht verfügbar"}
+        </div>
+      `;
       document.getElementById("time-continue").disabled = true;
     } else if (result.slots && result.slots.length > 0) {
-      // Create info header
-      const infoHtml = `
-                <div style="grid-column: 1 / -1; margin-bottom: 1rem;">
-                    <small style="color: var(--clr-primary-a40);">
-                        ${result.message || "Verfügbare Termine"} | 
-                        Dauer Ihrer Services: ${totalDuration} Minuten
-                    </small>
-                </div>
-            `;
+      // Count available slots
+      const availableCount = result.slots.filter((s) => s.available).length;
 
-      // Render available slots in grid
+      // Create info header with buffer notice if provided
+      const infoHtml = `
+        <div style="grid-column: 1 / -1; margin-bottom: 1rem;">
+          ${
+            result.info
+              ? `
+            <div class="alert alert-info" style="margin-bottom: 1rem;">
+              <strong>ℹ️ Wichtiger Hinweis:</strong><br>
+              Für optimale Servicequalität planen wir automatisch 30 Minuten 
+              Vor- und Nachbereitungszeit für jeden Termin ein. Dies garantiert 
+              Ihnen pünktlichen Service ohne Wartezeiten.
+            </div>
+          `
+              : ""
+          }
+          <small style="color: var(--clr-primary-a40);">
+            <strong>${availableCount} Termine verfügbar</strong> | 
+            Service-Dauer: ${totalDuration} Minuten
+            ${
+              result.info
+                ? ` | Gesamtzeit inkl. Puffer: ${totalDuration + 60} Minuten`
+                : ""
+            }
+          </small>
+        </div>
+      `;
+
+      // Helper function to calculate end time
+      const calculateEndTime = (startTime, durationMinutes) => {
+        const [hours, minutes] = startTime.split(":").map(Number);
+        const totalMinutes = hours * 60 + minutes + durationMinutes;
+        const endHours = Math.floor(totalMinutes / 60);
+        const endMinutes = totalMinutes % 60;
+        return `${String(endHours).padStart(2, "0")}:${String(
+          endMinutes
+        ).padStart(2, "0")}`;
+      };
+
+      // Render available slots in grid with enhanced tooltips
       const slotsHtml = result.slots
         .map((slot) => {
           const isAvailable = slot.available;
+          const reasonText = slot.reason || "";
+
+          // Create appropriate tooltip
+          let tooltip = "";
+          if (isAvailable) {
+            const endTime = calculateEndTime(slot.time, totalDuration);
+            tooltip = result.info
+              ? `Termin: ${slot.time} - ${endTime} Uhr\n(+ 30 Min. Vor-/Nachbereitung)`
+              : `Verfügbar: ${slot.time} - ${endTime} Uhr`;
+          } else {
+            tooltip = reasonText || "Dieser Termin ist nicht verfügbar";
+          }
+
+          // Add visual indicator for slots blocked due to buffer time
+          const hasBufferConflict =
+            reasonText && reasonText.includes("inkl. Puffer");
+
           return `<div class="time-slot ${!isAvailable ? "disabled" : ""}" 
-                             onclick="${
-                               isAvailable ? `selectTime('${slot.time}')` : ""
-                             }"
-                             title="${
-                               !isAvailable
-                                 ? "Dieser Termin ist nicht verfügbar"
-                                 : ""
-                             }">
-                            ${slot.time}
-                        </div>`;
+                       onclick="${
+                         isAvailable ? `selectTime('${slot.time}')` : ""
+                       }"
+                       title="${tooltip}"
+                       style="${
+                         !isAvailable && reasonText ? "position: relative;" : ""
+                       }">
+                      ${slot.time}
+                      ${
+                        hasBufferConflict
+                          ? '<span style="position: absolute; top: -5px; right: -5px; background: var(--clr-warning); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center;">⏱</span>'
+                          : ""
+                      }
+                  </div>`;
         })
         .join("");
 
       // Combine info and slots
       container.innerHTML = infoHtml + slotsHtml;
+
+      // Add legend if we have buffer information
+      if (result.info) {
+        container.innerHTML += `
+          <div style="grid-column: 1 / -1; margin-top: 2rem; padding: 1rem; background: var(--clr-surface-a10); border-radius: 8px;">
+            <small style="color: var(--clr-primary-a40);">
+              <strong>Legende:</strong><br>
+              ✅ <span style="color: var(--clr-success);">Verfügbar</span> - Klicken Sie zur Auswahl<br>
+              ⏱️ <span style="color: var(--clr-warning);">Mit Uhr-Symbol</span> - Blockiert wegen Pufferzeit eines anderen Termins<br>
+              ❌ <span style="color: var(--clr-error-a60);">Grau</span> - Nicht verfügbar
+            </small>
+          </div>
+        `;
+      }
     } else {
-      // Fallback for old API response format
+      // Fallback for old API response format (backward compatibility)
       const blockedSlots = result;
 
       let startTime, endTime;
@@ -646,26 +714,22 @@ async function loadTimeSlots(date) {
 
       // Create info header
       const infoHtml = `
-                <div style="grid-column: 1 / -1; margin-bottom: 1rem;">
-                    <small style="color: var(--clr-primary-a40);">
-                        ${
-                          slots.length - (blockedSlots.length || 0)
-                        } Termine verfügbar | 
-                        Dauer Ihrer Services: ${totalDuration} Minuten
-                    </small>
-                </div>
-            `;
+        <div style="grid-column: 1 / -1; margin-bottom: 1rem;">
+          <small style="color: var(--clr-primary-a40);">
+            ${slots.length - (blockedSlots.length || 0)} Termine verfügbar | 
+            Dauer Ihrer Services: ${totalDuration} Minuten
+          </small>
+        </div>
+      `;
 
       // Render slots
       const slotsHtml = slots
         .map((slot) => {
           const isBlocked = blockedSlots.includes(slot);
           return `<div class="time-slot ${isBlocked ? "disabled" : ""}" 
-                             onclick="${
-                               !isBlocked ? `selectTime('${slot}')` : ""
-                             }">
-                            ${slot}
-                        </div>`;
+                       onclick="${!isBlocked ? `selectTime('${slot}')` : ""}">
+                      ${slot}
+                  </div>`;
         })
         .join("");
 
@@ -676,6 +740,17 @@ async function loadTimeSlots(date) {
     document.getElementById("time-slots").innerHTML =
       '<p style="text-align: center; color: var(--clr-error);">Fehler beim Laden der Termine</p>';
   }
+}
+
+function calculateEndTime(startTime, durationMinutes) {
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const totalMinutes = hours * 60 + minutes + durationMinutes;
+  const endHours = Math.floor(totalMinutes / 60);
+  const endMinutes = totalMinutes % 60;
+  return `${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(
+    2,
+    "0"
+  )}`;
 }
 
 function selectTime(time) {

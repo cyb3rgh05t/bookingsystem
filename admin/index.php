@@ -38,10 +38,7 @@ $recent = $db->fetchAll("
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="../assets/css/theme.css">
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css">
-    <link rel="stylesheet" href="../assets/css/admin-mobile.css">
+    <link rel="stylesheet" href="../assets/css/admin.min.css">
 </head>
 
 <body>

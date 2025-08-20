@@ -80,10 +80,7 @@ function safe_html($value)
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <title>Einstellungen - Admin</title>
-    <link rel="stylesheet" href="../assets/css/theme.css">
-    <link rel="stylesheet" href="../assets/css/style.css">
-    <link rel="stylesheet" href="../assets/css/admin.css">
-    <link rel="stylesheet" href="../assets/css/admin-mobile.css">
+    <link rel="stylesheet" href="../assets/css/admin.min.css">
 </head>
 
 <body>
@@ -308,6 +305,21 @@ function safe_html($value)
                         </select>
                         <small style="color: var(--clr-primary-a40);">
                             Zeitintervalle für Terminbuchungen
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Puffer vor/nach Terminen (Minuten) *</label>
+                        <select name="appointment_buffer_time" class="form-control" required>
+                            <option value="0" <?php echo ($settings['appointment_buffer_time'] ?? 30) == 0 ? 'selected' : ''; ?>>Kein Puffer</option>
+                            <option value="15" <?php echo ($settings['appointment_buffer_time'] ?? 30) == 15 ? 'selected' : ''; ?>>15 Minuten</option>
+                            <option value="30" <?php echo ($settings['appointment_buffer_time'] ?? 30) == 30 ? 'selected' : ''; ?>>30 Minuten</option>
+                            <option value="45" <?php echo ($settings['appointment_buffer_time'] ?? 30) == 45 ? 'selected' : ''; ?>>45 Minuten</option>
+                            <option value="60" <?php echo ($settings['appointment_buffer_time'] ?? 30) == 60 ? 'selected' : ''; ?>>60 Minuten</option>
+                        </select>
+                        <small style="color: var(--clr-primary-a40);">
+                            Zeit für Vor- und Nachbereitung zwischen Terminen.
+                            Diese Zeit wird automatisch vor und nach jedem Termin blockiert.
                         </small>
                     </div>
                 </div>

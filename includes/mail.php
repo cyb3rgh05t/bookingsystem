@@ -5,6 +5,12 @@
  */
 function sendConfirmationEmail($to, $bookingNumber, $bookingData)
 {
+    // PHPMailer nur laden wenn wirklich eine Mail gesendet wird
+    if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+        require_once __DIR__ . '/../vendor/PHPMailer/src/Exception.php';
+        require_once __DIR__ . '/../vendor/PHPMailer/src/PHPMailer.php';
+        require_once __DIR__ . '/../vendor/PHPMailer/src/SMTP.php';
+    }
     try {
         // Get SMTP settings from database
         $db = Database::getInstance();

@@ -29,7 +29,8 @@ try {
         working_hours_weekday_end TEXT DEFAULT '21:00',
         working_hours_saturday_start TEXT DEFAULT '09:00',
         working_hours_saturday_end TEXT DEFAULT '14:00',
-        time_slot_duration INTEGER DEFAULT 30
+        time_slot_duration INTEGER DEFAULT 30,
+        appointment_buffer_time INTEGER DEFAULT 30
     );
 
     CREATE TABLE IF NOT EXISTS services (
