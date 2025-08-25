@@ -13,24 +13,16 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <title><?php echo SITE_NAME; ?> - Terminbuchung</title>
-    <link rel="stylesheet" href="assets/css/main.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/theme.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/mobile.css">
     <link rel="stylesheet" href="assets/css/print.css">
 
 </head>
 
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <a href="index.php" class="logo">
-                    <img src="assets/images/logo.png" alt="Logo" onerror="this.style.display='none'">
-                    <h1><?php echo htmlspecialchars($settings['company_name'] ?? 'Auto Service'); ?></h1>
-                </a>
 
-            </div>
-        </div>
-    </header>
 
     <!-- Main Content -->
     <main class="container" style="padding: 3rem 20px;">
@@ -99,7 +91,7 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
                         <label class="form-label">Adresse *</label>
                         <div class="address-input-group">
                             <div class="address-input-wrapper">
-                                <input type="text" id="address" class="form-control" required>
+                                <input type="text" id="address" class="form-control" placeholder="Bitte vollständige Adresse eingeben" required>
                             </div>
                             <button type="button" onclick="calculateDistanceFromInput()" class="btn btn-primary">
                                 📍 Berechnen
@@ -261,8 +253,8 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
                         </div>
                     </div>
 
-                    <div class="card" style="background: var(--clr-info); color: white;">
-                        <h3>Gesamtbetrag</h3>
+                    <div class="card" style="text-align: right; background: var(--clr-warning); color: white;">
+                        <h3>Gesamtbetrag :</h3>
                         <div id="summary-total" style="margin-top: 1rem; font-size: 1.5rem; font-weight: bold;">
                             <!-- Gesamtbetrag wird hier angezeigt -->
                         </div>
@@ -270,7 +262,7 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
 
                     <div style="margin-top: 2rem; display: flex; justify-content: space-between;">
                         <button class="btn" onclick="previousStep()">← Zurück</button>
-                        <button class="btn btn-success btn-large" onclick="confirmBooking()">Kostenpflichtig buchen</button>
+                        <button class="btn btn-large" onclick="confirmBooking()">Kostenpflichtig buchen</button>
                     </div>
                 </div>
 

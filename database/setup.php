@@ -110,7 +110,7 @@ try {
     $checkSettings = $db->query("SELECT COUNT(*) as count FROM settings")->fetch();
     if ($checkSettings['count'] == 0) {
         $db->exec("INSERT INTO settings (id, company_name, address, email, phone) 
-                   VALUES (1, 'MCS - Mobile Car Service', 'Hüllerstraße 16, 44649 Herne', 'ilyazcaneul90@gmail.com', '0173 3005064')");
+                   VALUES (1, 'Meine Firma', 'Musterstrasse 123', 'meinefirma@meinefirme.dev', '0123456789')");
     }
 
     // Standard-Admin erstellen (Passwort: admin123)

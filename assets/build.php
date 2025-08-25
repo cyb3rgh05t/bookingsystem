@@ -4,8 +4,7 @@ echo "Build-Prozess gestartet...\n";
 // ============ CSS KOMBINIEREN ============
 // Für Hauptseite
 $mainCssFiles = [
-    'css/fonts.css',    // Fonts zuerst!
-    'css/theme.css',
+    'css/theme-unified.css',
     'css/style.css',
     'css/mobile.css'
 ];

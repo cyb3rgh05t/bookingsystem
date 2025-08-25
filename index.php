@@ -26,8 +26,10 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
     <title><?php echo htmlspecialchars($settings['company_name'] ?? 'Auto Service'); ?> - Willkommen</title>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/main.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/theme.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/mobile.css">
     <style>
         .hero {
             min-height: auto;
@@ -58,7 +60,6 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
         .hero p {
             font-size: 1.3rem;
             margin-bottom: 1.5rem;
-            color: var(--clr-primary-a20);
         }
 
         /* Features in einer Reihe */
@@ -97,7 +98,6 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
         .feature-icon {
             font-size: 2.5rem;
             margin-bottom: 1rem;
-            color: var(--clr-info);
         }
 
         .feature h3 {
@@ -108,7 +108,6 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
         }
 
         .feature p {
-            color: var(--clr-primary-a30);
             font-size: 0.85rem;
             line-height: 1.4;
         }
@@ -241,7 +240,7 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
                 </a>
                 <nav>
                     <a href="booking.php" class="btn btn-primary">Termin buchen</a>
-                    <a href="admin/login.php" class="btn">Admin</a>
+                    <a href="admin/login.php" class="btn btn-secondary">Admin</a>
                 </nav>
             </div>
         </div>
@@ -253,7 +252,7 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
             <h1>Ihr mobiler Auto-Service</h1>
             <p>Wir kommen zu Ihnen - professionell, zuverlässig und bequem</p>
 
-            <a href="booking.php" class="btn btn-primary btn-large" style="font-size: 1.3rem; padding: 1.2rem 3rem;">
+            <a href="booking.php" class="btn btn-primary btn-large">
                 Jetzt Termin buchen →
             </a>
 
@@ -302,7 +301,7 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
     <section class="container" style="padding: 2rem 20px;">
         <h2 style="text-align: center; margin-bottom: 2rem;">Unsere Services</h2>
 
-        <div class="grid grid-3" id="services-preview">
+        <div class="grid grid-2" id="services-preview">
             <?php
             $services = $db->fetchAll("SELECT * FROM services WHERE is_active = 1");
             foreach ($services as $service):
@@ -415,7 +414,7 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
 
                 <!-- Call to Action -->
                 <div style="text-align: center; margin-top: 3rem;">
-                    <a href="booking.php" class="btn btn-primary btn-large" style="font-size: 1.1rem; padding: 1rem 2.5rem; letter-spacing: 0.05em;">
+                    <a href="booking.php" class="btn btn-primary btn-large">
                         Jetzt Termin vereinbaren →
                     </a>
                 </div>
@@ -428,8 +427,8 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
         <div class="container">
             <div class="grid grid-3" style="gap: 3rem;">
                 <div>
-                    <h3 style="margin-bottom: 1rem;">Kontakt</h3>
-                    <p style="color: var(--clr-primary-a40);">
+                    <h3 style="color: var(--clr-primary-a40); margin-bottom: 1rem;">Kontakt</h3>
+                    <p>
                         <?php echo htmlspecialchars($settings['company_name'] ?? 'Auto Service GmbH'); ?><br>
                         <?php echo htmlspecialchars($settings['address'] ?? 'Musterstraße 1, 12345 Musterstadt'); ?><br>
                         Tel: <?php echo htmlspecialchars($settings['phone'] ?? '0123-456789'); ?><br>
@@ -438,8 +437,8 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
                 </div>
 
                 <div>
-                    <h3 style="margin-bottom: 1rem;">Öffnungszeiten</h3>
-                    <p style="color: var(--clr-primary-a40);">
+                    <h3 style="color: var(--clr-primary-a40); margin-bottom: 1rem;">Öffnungszeiten</h3>
+                    <p>
                         Montag - Freitag: <?php echo $weekdayStart; ?> - <?php echo $weekdayEnd; ?> Uhr<br>
                         Samstag: <?php echo $saturdayStart; ?> - <?php echo $saturdayEnd; ?> Uhr<br>
                         Sonntag: Geschlossen (Termin möglich nach Absprache)
@@ -447,8 +446,8 @@ $minPriceAbove10km = number_format($settings['min_price_above_10km'] ?? 59.90, 2
                 </div>
 
                 <div>
-                    <h3 style="margin-bottom: 1rem;">Service</h3>
-                    <p style="color: var(--clr-primary-a40);">
+                    <h3 style="color: var(--clr-primary-a40); margin-bottom: 1rem;">Service</h3>
+                    <p>
                         ✓ Mobiler Service bis <?php echo $maxDistance; ?>km<br>
                         ✓ Online-Terminbuchung<br>
                         ✓ Bargeldlose Zahlung<br>

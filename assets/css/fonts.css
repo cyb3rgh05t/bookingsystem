@@ -1,7 +1,0 @@
-/* In assets/css/fonts.css */
-@font-face {
-  font-family: "Space Grotesk";
-  src: url("../fonts/SpaceGrotesk-Light.woff2") format("woff2");
-  font-weight: 300;
-  font-display: swap;
-}
