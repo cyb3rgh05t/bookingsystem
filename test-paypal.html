@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>PayPal Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <h2>PayPal Sandbox Test</h2>
+    <div id="paypal-button-container"></div>
+
+    <!-- Ihre Client ID hier einfügen -->
+    <script src="https://www.paypal.com/sdk/js?client-id=AdEjnQCMsFlykEBbU0wiVHGUZkO1EFCdPxdsrYRzOIyFE434kWRyeetf8bnO8B08Z9C0wYCQXOmSO256&currency=EUR"></script>
+
+    <script>
+      paypal
+        .Buttons({
+          createOrder: function (data, actions) {
+            return actions.order.create({
+              purchase_units: [
+                {
+                  amount: {
+                    value: "10.00",
+                  },
+                },
+              ],
+            });
+          },
+          onApprove: function (data, actions) {
+            return actions.order.capture().then(function (details) {
+              alert("Zahlung erfolgreich! Transaction ID: " + details.id);
+            });
+          },
+        })
+        .render("#paypal-button-container");
+    </script>
+  </body>
+</html>

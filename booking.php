@@ -365,7 +365,7 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
                                         <button class="btn btn-primary" onclick="downloadPDF()">
                                             📥 Als PDF
                                         </button>
-                                        <button class="btn btn-success" onclick="processPayment()">
+                                        <button class="btn btn-success" onclick="processPayment()" data-appointment-id="">
                                             💳 Jetzt bezahlen
                                         </button>
                                     </div>
@@ -421,7 +421,19 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
         </script>
     <?php endif; ?>
 
-    <script src="assets/js/booking.min.js"></script>
+    <script src="assets/js/booking.js"></script>
+    <!-- HINZUFÜGEN: Payment Integration Scripts -->
+    <div id="payment-container" style="display:none;"></div>
+    <div id="payment-status" style="display:none;"></div>
+
+    <!-- PayPal SDK wird dynamisch geladen wenn benötigt -->
+    <script src="assets/js/payment.js"></script>
+
+    <!-- Appointment ID für Payment verfügbar machen -->
+    <script>
+        // Globale Variable für Payment Integration
+        let currentAppointmentId = null;
+    </script>
 </body>
 
 </html>

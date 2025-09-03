@@ -37,7 +37,7 @@ function sendConfirmationEmailSMTP($to, $bookingNumber, $bookingData)
         // ===== SMTP CONFIGURATION =====
 
         // Enable verbose debug output (nur für Tests - später auskommentieren)
-        // $mail->SMTPDebug = SMTP::DEBUG_SERVER;
+        $mail->SMTPDebug = SMTP::DEBUG_SERVER;
 
         // Server settings
         $mail->isSMTP();                                   // Use SMTP

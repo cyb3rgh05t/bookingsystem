@@ -13,49 +13,97 @@ $db = Database::getInstance();
 
 // Update settings
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $db->query("
-        UPDATE settings SET 
-            company_name = ?,
-            address = ?,
-            phone = ?,
-            email = ?,
-            google_maps_api_key = ?,
-            paypal_client_id = ?,
-            smtp_host = ?,
-            smtp_port = ?,
-            smtp_user = ?,
-            smtp_password = ?,
-            max_distance = ?,
-            min_price_above_10km = ?,
-            price_per_km = ?,
-            free_distance_km = ?,
-            working_hours_weekday_start = ?,
-            working_hours_weekday_end = ?,
-            working_hours_saturday_start = ?,
-            working_hours_saturday_end = ?,
-            time_slot_duration = ?
-        WHERE id = 1
-    ", [
-        $_POST['company_name'],
-        $_POST['address'],
-        $_POST['phone'],
-        $_POST['email'],
-        $_POST['google_maps_api_key'] ?: null,
-        $_POST['paypal_client_id'] ?: null,
-        $_POST['smtp_host'] ?: null,
-        $_POST['smtp_port'] ?: null,
-        $_POST['smtp_user'] ?: null,
-        $_POST['smtp_password'] ?: null,
-        $_POST['max_distance'],
-        $_POST['min_price_above_10km'],
-        $_POST['price_per_km'],
-        $_POST['free_distance_km'],
-        $_POST['working_hours_weekday_start'],
-        $_POST['working_hours_weekday_end'],
-        $_POST['working_hours_saturday_start'],
-        $_POST['working_hours_saturday_end'],
-        $_POST['time_slot_duration']
-    ]);
+    // Bereite alle Update-Felder vor
+    $updates = [];
+    $params = [];
+
+    // Basis-Einstellungen
+    $updates[] = "company_name = ?";
+    $params[] = $_POST['company_name'];
+
+    $updates[] = "address = ?";
+    $params[] = $_POST['address'];
+
+    $updates[] = "phone = ?";
+    $params[] = $_POST['phone'];
+
+    $updates[] = "email = ?";
+    $params[] = $_POST['email'];
+
+    $updates[] = "google_maps_api_key = ?";
+    $params[] = $_POST['google_maps_api_key'] ?: null;
+
+    $updates[] = "paypal_client_id = ?";
+    $params[] = $_POST['paypal_client_id'] ?: null;
+
+    // NEU: PayPal erweiterte Einstellungen
+    $updates[] = "paypal_client_secret = ?";
+    $params[] = $_POST['paypal_client_secret'] ?: null;
+
+    $updates[] = "paypal_merchant_email = ?";
+    $params[] = $_POST['paypal_merchant_email'] ?: null;
+
+    $updates[] = "paypal_mode = ?";
+    $params[] = $_POST['paypal_mode'] ?? 'sandbox';
+
+    // NEU: Lexware Einstellungen
+    $updates[] = "lexware_api_url = ?";
+    $params[] = $_POST['lexware_api_url'] ?? 'https://api.lexware.de/v1';
+
+    $updates[] = "lexware_api_key = ?";
+    $params[] = $_POST['lexware_api_key'] ?: null;
+
+    // SMTP Einstellungen
+    $updates[] = "smtp_host = ?";
+    $params[] = $_POST['smtp_host'] ?: null;
+
+    $updates[] = "smtp_port = ?";
+    $params[] = $_POST['smtp_port'] ?: null;
+
+    $updates[] = "smtp_user = ?";
+    $params[] = $_POST['smtp_user'] ?: null;
+
+    $updates[] = "smtp_password = ?";
+    $params[] = $_POST['smtp_password'] ?: null;
+
+    // Service-Gebiet Einstellungen
+    $updates[] = "max_distance = ?";
+    $params[] = $_POST['max_distance'];
+
+    $updates[] = "min_price_above_10km = ?";
+    $params[] = $_POST['min_price_above_10km'];
+
+    $updates[] = "price_per_km = ?";
+    $params[] = $_POST['price_per_km'];
+
+    $updates[] = "free_distance_km = ?";
+    $params[] = $_POST['free_distance_km'];
+
+    // Arbeitszeiten
+    $updates[] = "working_hours_weekday_start = ?";
+    $params[] = $_POST['working_hours_weekday_start'];
+
+    $updates[] = "working_hours_weekday_end = ?";
+    $params[] = $_POST['working_hours_weekday_end'];
+
+    $updates[] = "working_hours_saturday_start = ?";
+    $params[] = $_POST['working_hours_saturday_start'];
+
+    $updates[] = "working_hours_saturday_end = ?";
+    $params[] = $_POST['working_hours_saturday_end'];
+
+    $updates[] = "time_slot_duration = ?";
+    $params[] = $_POST['time_slot_duration'];
+
+    $updates[] = "appointment_buffer_time = ?";
+    $params[] = $_POST['appointment_buffer_time'] ?? 30;
+
+    // WHERE clause
+    $params[] = 1;
+
+    // Führe Update aus
+    $query = "UPDATE settings SET " . implode(", ", $updates) . " WHERE id = ?";
+    $db->query($query, $params);
 
     $success = 'Einstellungen erfolgreich gespeichert';
 }
@@ -255,6 +303,18 @@ function safe_html($value)
             color: #93c5fd;
         }
 
+        .alert-warning {
+            background-color: rgba(251, 191, 36, 0.1);
+            border: 1px solid #fbbf24;
+            color: #fde68a;
+        }
+
+        .alert-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+        }
+
         /* Card */
         .card {
             background: var(--clr-surface-a10);
@@ -357,6 +417,15 @@ function safe_html($value)
         .btn-primary {
             background-color: var(--clr-primary-a0);
             color: var(--clr-dark-a0);
+        }
+
+        .btn-secondary {
+            background-color: var(--clr-surface-a30);
+            color: var(--clr-light-a0);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--clr-surface-a40);
         }
 
         .btn-large {
@@ -492,13 +561,13 @@ function safe_html($value)
                 <!-- API Settings -->
                 <div class="card settings-section">
                     <h3>API Einstellungen</h3>
-                    <p>Optional: Für erweiterte Funktionen wie Google Maps und PayPal-Zahlungen</p>
+                    <p>Optional: Für erweiterte Funktionen wie Google Maps, PayPal-Zahlungen und Lexware-Integration</p>
 
                     <div class="grid grid-2">
                         <div class="form-group">
                             <label class="form-label">Google Maps API Key</label>
                             <input type="text" name="google_maps_api_key" class="form-control"
-                                value="<?php echo safe_html($settings['google_maps_api_key']); ?>"
+                                value="<?php echo safe_html($settings['google_maps_api_key'] ?? ''); ?>"
                                 placeholder="AIza...">
                             <small>Für Adress-Autocomplete und Entfernungsberechnung</small>
                         </div>
@@ -506,10 +575,87 @@ function safe_html($value)
                         <div class="form-group">
                             <label class="form-label">PayPal Client ID</label>
                             <input type="text" name="paypal_client_id" class="form-control"
-                                value="<?php echo safe_html($settings['paypal_client_id']); ?>"
+                                value="<?php echo safe_html($settings['paypal_client_id'] ?? ''); ?>"
                                 placeholder="AX...">
                             <small>Für Online-Zahlungen via PayPal</small>
                         </div>
+                    </div>
+                </div>
+
+                <!-- NEU: Lexware API Settings -->
+                <div class="card settings-section">
+                    <h3>Lexware API Einstellungen</h3>
+                    <p>Konfigurieren Sie die Lexware API für automatische Rechnungserstellung nach Zahlungseingang</p>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Lexware API URL</label>
+                            <input type="text" name="lexware_api_url" class="form-control"
+                                value="<?php echo safe_html($settings['lexware_api_url'] ?? 'https://api.lexware.de/v1'); ?>"
+                                placeholder="https://api.lexware.de/v1">
+                            <small>Standard: https://api.lexware.de/v1</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Lexware API Key</label>
+                            <input type="password" name="lexware_api_key" class="form-control"
+                                value="<?php echo safe_html($settings['lexware_api_key'] ?? ''); ?>"
+                                placeholder="Ihr Lexware API Schlüssel">
+                            <small>Erhalten Sie in Ihrem Lexware Account unter API-Einstellungen</small>
+                        </div>
+                    </div>
+
+                    <!-- Lexware Test Button -->
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary" onclick="testLexwareConnection()">
+                            <i class="fas fa-plug"></i> Verbindung testen
+                        </button>
+                        <div id="lexware-test-result" style="margin-top: 1rem;"></div>
+                    </div>
+                </div>
+
+                <!-- NEU: PayPal Erweiterte Einstellungen -->
+                <div class="card settings-section">
+                    <h3>PayPal Erweiterte Einstellungen</h3>
+                    <p>Zusätzliche PayPal-Konfiguration für die Zahlungsabwicklung</p>
+
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label">PayPal Client Secret</label>
+                            <input type="password" name="paypal_client_secret" class="form-control"
+                                value="<?php echo safe_html($settings['paypal_client_secret'] ?? ''); ?>"
+                                placeholder="Ihr PayPal Client Secret">
+                            <small>Erhalten Sie im PayPal Developer Dashboard</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">PayPal Händler E-Mail</label>
+                            <input type="email" name="paypal_merchant_email" class="form-control"
+                                value="<?php echo safe_html($settings['paypal_merchant_email'] ?? ''); ?>"
+                                placeholder="ihre-paypal@email.de">
+                            <small>Ihre PayPal Business E-Mail-Adresse</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">PayPal Modus</label>
+                            <select name="paypal_mode" class="form-control">
+                                <option value="sandbox" <?php echo ($settings['paypal_mode'] ?? 'sandbox') === 'sandbox' ? 'selected' : ''; ?>>
+                                    Sandbox (Test)
+                                </option>
+                                <option value="live" <?php echo ($settings['paypal_mode'] ?? '') === 'live' ? 'selected' : ''; ?>>
+                                    Live (Produktion)
+                                </option>
+                            </select>
+                            <small>Verwenden Sie Sandbox für Tests</small>
+                        </div>
+                    </div>
+
+                    <!-- PayPal Test Button -->
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary" onclick="testPayPalConnection()">
+                            <i class="fas fa-plug"></i> PayPal Verbindung testen
+                        </button>
+                        <div id="paypal-test-result" style="margin-top: 1rem;"></div>
                     </div>
                 </div>
 
@@ -635,8 +781,8 @@ function safe_html($value)
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Puffer vor/nach Terminen (Minuten) *</label>
-                            <select name="appointment_buffer_time" class="form-control" required>
+                            <label class="form-label">Puffer vor/nach Terminen (Minuten)</label>
+                            <select name="appointment_buffer_time" class="form-control">
                                 <option value="0" <?php echo ($settings['appointment_buffer_time'] ?? 30) == 0 ? 'selected' : ''; ?>>Kein Puffer</option>
                                 <option value="15" <?php echo ($settings['appointment_buffer_time'] ?? 30) == 15 ? 'selected' : ''; ?>>15 Minuten</option>
                                 <option value="30" <?php echo ($settings['appointment_buffer_time'] ?? 30) == 30 ? 'selected' : ''; ?>>30 Minuten</option>
@@ -654,7 +800,7 @@ function safe_html($value)
                 </div>
 
                 <div style="display: flex; gap: 1rem;">
-                    <button type="submit" class="btn btn-primary btn-large">Speichern</button>
+                    <button type="submit" name="save_settings" class="btn btn-primary btn-large">Speichern</button>
                     <button type="button" class="btn" onclick="if(confirm('Alle Einstellungen auf Standardwerte zurücksetzen?')) resetToDefaults()">
                         Reset
                     </button>
@@ -675,6 +821,136 @@ function safe_html($value)
             document.querySelector('[name="working_hours_saturday_start"]').value = '09:00';
             document.querySelector('[name="working_hours_saturday_end"]').value = '14:00';
             document.querySelector('[name="time_slot_duration"]').value = '30';
+            document.querySelector('[name="appointment_buffer_time"]').value = '30';
+        }
+
+        /**
+         * Test Lexware API Verbindung
+         */
+        function testLexwareConnection() {
+            const resultDiv = document.getElementById('lexware-test-result');
+            const apiUrl = document.querySelector('[name="lexware_api_url"]').value;
+            const apiKey = document.querySelector('[name="lexware_api_key"]').value;
+
+            if (!apiKey) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Bitte geben Sie einen API Key ein
+                    </div>
+                `;
+                return;
+            }
+
+            resultDiv.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-spinner fa-spin"></i> Teste Verbindung...
+                </div>
+            `;
+
+            // Test API Verbindung
+            fetch('../api/test-lexware.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        api_url: apiUrl,
+                        api_key: apiKey
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> 
+                            Verbindung erfolgreich!<br>
+                            <small>Firma: ${data.company_name || 'N/A'}</small>
+                        </div>
+                    `;
+                    } else {
+                        resultDiv.innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fas fa-times-circle"></i> 
+                            Verbindung fehlgeschlagen: ${data.error}
+                        </div>
+                    `;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <i class="fas fa-times-circle"></i> 
+                        Fehler: ${error.message}
+                    </div>
+                `;
+                });
+        }
+
+        /**
+         * Test PayPal Verbindung
+         */
+        function testPayPalConnection() {
+            const resultDiv = document.getElementById('paypal-test-result');
+            const clientId = document.querySelector('[name="paypal_client_id"]').value;
+            const clientSecret = document.querySelector('[name="paypal_client_secret"]').value;
+            const mode = document.querySelector('[name="paypal_mode"]').value;
+
+            if (!clientId || !clientSecret) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        Bitte geben Sie Client ID und Secret ein
+                    </div>
+                `;
+                return;
+            }
+
+            resultDiv.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-spinner fa-spin"></i> Teste PayPal Verbindung...
+                </div>
+            `;
+
+            // Test PayPal Verbindung
+            fetch('../api/test-paypal.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        client_id: clientId,
+                        client_secret: clientSecret,
+                        mode: mode
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i> 
+                            PayPal Verbindung erfolgreich!<br>
+                            <small>Modus: ${mode === 'sandbox' ? 'Sandbox (Test)' : 'Live'}</small>
+                        </div>
+                    `;
+                    } else {
+                        resultDiv.innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fas fa-times-circle"></i> 
+                            Verbindung fehlgeschlagen: ${data.error}
+                        </div>
+                    `;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        <i class="fas fa-times-circle"></i> 
+                        Fehler: ${error.message}
+                    </div>
+                `;
+                });
         }
     </script>
 </body>

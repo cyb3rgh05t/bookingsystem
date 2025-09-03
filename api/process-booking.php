@@ -1,14 +1,27 @@
 <?php
+// WICHTIG: Absolut NICHTS vor diesem <?php Tag!
 
-header('Content-Type: application/json');
+// Verhindere jegliche ungewollte Ausgabe
+ob_start();
+ob_clean();
+
+// Setze korrekten Content-Type
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+
 require_once '../includes/config.php';
 require_once '../includes/db.php';
 
 try {
-    $data = json_decode(file_get_contents('php://input'), true);
-
-    if (!$data) {
+    // Hole und validiere Input
+    $rawInput = file_get_contents('php://input');
+    if (!$rawInput) {
         throw new Exception('Keine Daten empfangen');
+    }
+
+    $data = json_decode($rawInput, true);
+    if (!$data || json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('Ungültige JSON-Daten: ' . json_last_error_msg());
     }
 
     $db = Database::getInstance();
@@ -116,7 +129,7 @@ try {
                 );
 
                 if ($emailSent) {
-                    error_log("✓ E-Mail erfolgreich gesendet an: " . $data['customer']['email']);
+                    error_log("✔ E-Mail erfolgreich gesendet an: " . $data['customer']['email']);
                 } else {
                     error_log("⚠ E-Mail konnte nicht gesendet werden, aber Buchung wurde gespeichert");
                     $emailError = "E-Mail konnte nicht gesendet werden";
@@ -142,13 +155,13 @@ try {
                     );
 
                     if ($emailSent) {
-                        error_log("✓ E-Mail mit Fallback-Funktion gesendet");
+                        error_log("✔ E-Mail mit Fallback-Funktion gesendet");
                     }
                 } catch (Exception $e) {
                     error_log("Fallback E-Mail auch fehlgeschlagen: " . $e->getMessage());
                 }
             } else {
-                error_log("⚠ Keine E-Mail-Funktion gefunden, aber Buchung wurde gespeichert");
+                error_log("ℹ Keine E-Mail-Funktion gefunden, aber Buchung wurde gespeichert");
             }
         }
     } else {
@@ -162,7 +175,7 @@ try {
     // ========================================
 
     $response = [
-        'success' => true,  // Buchung war IMMER erfolgreich!
+        'success' => true,
         'bookingNumber' => $bookingNumber,
         'appointmentId' => $appointmentId,
         'emailSent' => $emailSent
@@ -173,16 +186,25 @@ try {
         $response['emailInfo'] = $emailError;
     }
 
-    echo json_encode($response);
+    // Stelle sicher, dass nichts anderes ausgegeben wurde
+    ob_clean();
+
+    // Sende JSON Response
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
+    exit;
 } catch (Exception $e) {
     // Only if BOOKING failed (not email)
     if (isset($db) && $db->getConnection()->inTransaction()) {
         $db->getConnection()->rollBack();
     }
 
+    // Clear any output
+    ob_clean();
+
     http_response_code(500);
     echo json_encode([
         'success' => false,
         'error' => $e->getMessage()
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }

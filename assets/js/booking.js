@@ -1,5 +1,3 @@
-// assets/js/booking.js - FIXED VERSION
-
 let currentStep = 1;
 let bookingData = {
   customer: {},
@@ -1017,6 +1015,7 @@ async function confirmBooking() {
     const result = await response.json();
 
     if (result.success) {
+      currentAppointmentId = result.appointmentId;
       // Show confirmation
       document.querySelector(`.step[data-step="5"]`).classList.remove("active");
       document.querySelector(`.step[data-step="5"]`).classList.add("completed");
@@ -1289,7 +1288,12 @@ function downloadPDF() {
 }
 
 // Process payment
+// Override processPayment für PayPal Integration
 function processPayment() {
-  // Here you would integrate PayPal or credit card payment
-  alert("Weiterleitung zur Zahlung...");
+  if (currentAppointmentId) {
+    // Initialisiere PayPal Payment mit der Appointment ID
+    initializePayment(currentAppointmentId);
+  } else {
+    alert("Fehler: Buchungs-ID nicht gefunden. Bitte laden Sie die Seite neu.");
+  }
 }
