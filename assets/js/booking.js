@@ -1,3 +1,6 @@
+// Globale Variable für Appointment ID hinzufügen
+let currentAppointmentId = null;
+
 let currentStep = 1;
 let bookingData = {
   customer: {},
@@ -1003,9 +1006,16 @@ function showSummary() {
   ).textContent = `${bookingData.total.toFixed(2)}€`;
 }
 
-// Confirm booking
+// Confirm booking - MIT LEXWARE INTEGRATION UPDATE
 async function confirmBooking() {
   try {
+    // Zeige Lade-Indikator
+    const confirmButton = event.target;
+    const originalText = confirmButton.innerHTML;
+    confirmButton.disabled = true;
+    confirmButton.innerHTML =
+      '<i class="fas fa-spinner fa-spin"></i> Buchung wird verarbeitet...';
+
     const response = await fetch("api/process-booking.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1034,14 +1044,59 @@ async function confirmBooking() {
       // Fill print details
       fillPrintDetails(result.bookingNumber);
 
+      // LEXWARE FEEDBACK - Zeige Info wenn Rechnung erstellt wurde
+      if (result.lexwareCreated && result.invoiceNumber) {
+        // Füge Lexware Info in die Bestätigungsseite ein
+        const confirmationHeader = document.querySelector(
+          '.step-panel[data-step="6"] h2'
+        );
+        if (confirmationHeader) {
+          const lexwareInfo = document.createElement("div");
+          lexwareInfo.className = "alert alert-success";
+          lexwareInfo.style.marginTop = "1rem";
+          lexwareInfo.innerHTML = `
+            <i class="fas fa-file-invoice"></i> 
+            <strong>Rechnung erstellt!</strong><br>
+            Ihre Rechnung wurde automatisch in unserem System angelegt.<br>
+            <small>Rechnungsnummer: ${result.invoiceNumber}</small>
+          `;
+          confirmationHeader.parentNode.insertBefore(
+            lexwareInfo,
+            confirmationHeader.nextSibling
+          );
+        }
+        console.log("✅ Lexware Rechnung erstellt:", result.invoiceNumber);
+      } else if (result.lexwareError) {
+        console.warn("⚠️ Lexware Fehler:", result.lexwareError);
+      }
+
+      // Email Feedback
+      if (result.emailSent) {
+        console.log("✅ Bestätigungs-E-Mail gesendet");
+      } else if (result.emailError) {
+        console.warn("⚠️ E-Mail Fehler:", result.emailError);
+      }
+
       // Scroll to top
       window.scrollTo(0, 0);
     } else {
-      alert("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.");
+      alert(
+        "Ein Fehler ist aufgetreten: " +
+          (result.error || "Bitte versuchen Sie es erneut.")
+      );
+      // Reset Button
+      confirmButton.disabled = false;
+      confirmButton.innerHTML = originalText;
     }
   } catch (error) {
     console.error("Error confirming booking:", error);
     alert("Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.");
+    // Reset Button bei Fehler
+    const confirmButton = event.target;
+    if (confirmButton) {
+      confirmButton.disabled = false;
+      confirmButton.innerHTML = "Kostenpflichtig buchen";
+    }
   }
 }
 
@@ -1287,12 +1342,16 @@ function downloadPDF() {
   printConfirmation();
 }
 
-// Process payment
-// Override processPayment für PayPal Integration
+// Process payment - UPDATE FÜR PAYPAL INTEGRATION
 function processPayment() {
   if (currentAppointmentId) {
     // Initialisiere PayPal Payment mit der Appointment ID
-    initializePayment(currentAppointmentId);
+    if (typeof initializePayment === "function") {
+      initializePayment(currentAppointmentId);
+    } else {
+      console.error("PayPal payment.js nicht geladen");
+      alert("Zahlungsmodul wird geladen, bitte versuchen Sie es erneut.");
+    }
   } else {
     alert("Fehler: Buchungs-ID nicht gefunden. Bitte laden Sie die Seite neu.");
   }

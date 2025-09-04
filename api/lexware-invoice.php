@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Lexware API Integration für automatische Rechnungserstellung
- * Wird nach erfolgreicher PayPal-Zahlung aufgerufen
+ * Lexware (ehemals lexoffice) API Integration für automatische Rechnungserstellung
+ * Verwendet die korrekte API-Struktur nach dem Rebranding
  */
 
 require_once '../includes/config.php';
@@ -19,13 +19,13 @@ class LexwareAPI
         $this->db = Database::getInstance();
         $settings = $this->db->fetch("SELECT * FROM settings WHERE id = 1");
 
-        // Lexware API Credentials aus Settings
-        $this->apiUrl = $settings['lexware_api_url'] ?? 'https://api.lexware.de/v1';
+        // Lexware API (ehemals lexoffice) - neue URL seit Mai 2025
+        $this->apiUrl = $settings['lexware_api_url'] ?? 'https://api.lexware.io/v1';
         $this->apiKey = $settings['lexware_api_key'] ?? '';
     }
 
     /**
-     * Erstellt eine Rechnung in Lexware nach erfolgreicher Zahlung
+     * Erstellt eine Rechnung in Lexware
      */
     public function createInvoice($appointmentId, $paymentData = [])
     {
@@ -37,15 +37,15 @@ class LexwareAPI
                 throw new Exception('Buchung nicht gefunden');
             }
 
-            // Bereite Rechnungsdaten für Lexware vor
+            // Bereite Rechnungsdaten für Lexware API vor (NEUE STRUKTUR!)
             $invoiceData = $this->prepareInvoiceData($appointment, $paymentData);
 
             // Sende Rechnung an Lexware API
             $lexwareResponse = $this->sendToLexware($invoiceData);
 
-            // Speichere Lexware Rechnungsnummer in der Datenbank
+            // Speichere Lexware ID in der Datenbank
             if ($lexwareResponse['success']) {
-                $this->updateAppointmentWithInvoice($appointmentId, $lexwareResponse['invoice_number']);
+                $this->updateAppointmentWithInvoice($appointmentId, $lexwareResponse['invoice_id']);
             }
 
             return $lexwareResponse;
@@ -102,111 +102,127 @@ class LexwareAPI
     }
 
     /**
-     * Bereite Rechnungsdaten für Lexware API vor
+     * Bereite Rechnungsdaten für Lexware API vor - NEUE STRUKTUR!
      */
-    private function prepareInvoiceData($appointment, $paymentData)
+    private function prepareInvoiceData($appointment, $paymentData = [])
     {
-        $settings = $this->db->fetch("SELECT * FROM settings WHERE id = 1");
-
         // Generiere Buchungsnummer
-        $bookingNumber = date('Y', strtotime($appointment['created_at'])) . '-' . str_pad($appointment['id'], 4, '0', STR_PAD_LEFT);
+        $bookingNumber = date('Y') . '-' . str_pad($appointment['id'], 4, '0', STR_PAD_LEFT);
 
-        // Rechnungspositionen vorbereiten
-        $positions = [];
-        $positionNumber = 1;
+        // Bereite Line Items vor
+        $lineItems = [];
 
-        // Services als Rechnungspositionen
+        // Services als Line Items
         foreach ($appointment['services'] as $service) {
-            $positions[] = [
-                'positionNumber' => $positionNumber++,
-                'articleNumber' => 'SERVICE-' . $positionNumber,
-                'description' => $service['name'] . "\n" . $service['description'],
+            $lineItems[] = [
+                'type' => 'custom',
+                'name' => $service['name'],
+                'description' => $service['description'],
                 'quantity' => 1,
-                'unit' => 'Stück',
+                'unitName' => 'Stück',
                 'unitPrice' => [
-                    'amount' => $service['price'],
                     'currency' => 'EUR',
-                    'taxRate' => 19 // Standard MwSt-Satz
+                    'netAmount' => round($service['price'] / 1.19, 2), // Netto-Betrag bei 19% MwSt
+                    'taxRatePercentage' => 19
                 ],
-                'totalPrice' => [
-                    'amount' => $service['price'],
-                    'currency' => 'EUR'
-                ]
+                'discountPercentage' => 0
             ];
         }
 
-        // Anfahrtskosten als Position hinzufügen
+        // Anfahrtskosten als Line Item
         if ($appointment['travel_cost'] > 0) {
-            $positions[] = [
-                'positionNumber' => $positionNumber++,
-                'articleNumber' => 'TRAVEL',
-                'description' => sprintf('Anfahrtskosten (%.1f km)', $appointment['distance_km']),
+            $lineItems[] = [
+                'type' => 'custom',
+                'name' => 'Anfahrtskosten',
+                'description' => sprintf('Entfernung: %.1f km', $appointment['distance_km']),
                 'quantity' => 1,
-                'unit' => 'Pauschale',
+                'unitName' => 'Pauschale',
                 'unitPrice' => [
-                    'amount' => $appointment['travel_cost'],
                     'currency' => 'EUR',
-                    'taxRate' => 19
+                    'netAmount' => round($appointment['travel_cost'] / 1.19, 2),
+                    'taxRatePercentage' => 19
                 ],
-                'totalPrice' => [
-                    'amount' => $appointment['travel_cost'],
-                    'currency' => 'EUR'
-                ]
+                'discountPercentage' => 0
             ];
         }
 
-        // Lexware Rechnungsobjekt
+        // Zusätzlicher Text-Eintrag mit Fahrzeugdaten
+        if (!empty($appointment['car_brand'])) {
+            $lineItems[] = [
+                'type' => 'text',
+                'name' => 'Fahrzeugdaten',
+                'description' => sprintf(
+                    "Marke: %s, Modell: %s, Baujahr: %s, Kennzeichen: %s",
+                    $appointment['car_brand'] ?? '-',
+                    $appointment['car_model'] ?? '-',
+                    $appointment['car_year'] ?? '-',
+                    $appointment['license_plate'] ?? '-'
+                )
+            ];
+        }
+
+        // Erstelle die Rechnung nach Lexware API Spezifikation
         $invoice = [
-            'invoiceNumber' => null, // Wird von Lexware generiert
-            'invoiceDate' => date('Y-m-d'),
-            'performanceDate' => $appointment['appointment_date'],
-            'dueDate' => date('Y-m-d', strtotime('+14 days')), // 14 Tage Zahlungsziel
-            'customer' => [
-                'customerNumber' => $this->getOrCreateCustomerNumber($appointment),
+            'archived' => false,
+            'voucherDate' => date('c'), // ISO 8601 Format
+
+            // Adresse
+            'address' => [
                 'name' => $appointment['first_name'] . ' ' . $appointment['last_name'],
-                'firstName' => $appointment['first_name'],
-                'lastName' => $appointment['last_name'],
-                'email' => $appointment['email'],
-                'phone' => $appointment['phone'],
-                'address' => [
-                    'street' => $this->extractStreet($appointment['address']),
-                    'zip' => $this->extractZip($appointment['address']),
-                    'city' => $this->extractCity($appointment['address']),
-                    'country' => 'DE'
-                ]
+                'street' => $this->extractStreet($appointment['address']),
+                'city' => $this->extractCity($appointment['address']),
+                'zip' => $this->extractZip($appointment['address']),
+                'countryCode' => 'DE'
             ],
-            'positions' => $positions,
-            'totalAmount' => [
-                'amount' => $appointment['total_price'],
+
+            // Rechnungspositionen
+            'lineItems' => $lineItems,
+
+            // Gesamtpreis
+            'totalPrice' => [
                 'currency' => 'EUR'
             ],
-            'paymentMethod' => $paymentData['payment_method'] ?? 'PayPal',
-            'paymentStatus' => 'paid',
-            'paymentDate' => date('Y-m-d'),
-            'paymentReference' => $paymentData['transaction_id'] ?? '',
-            'internalNote' => sprintf(
-                "Buchungsnummer: %s\nTermin: %s %s\nFahrzeug: %s %s (%s)\nKennzeichen: %s",
+
+            // Steuerbedingungen
+            'taxConditions' => [
+                'taxType' => 'net'  // Netto-Rechnung
+            ],
+
+            // Zahlungsbedingungen
+            'paymentConditions' => [
+                'paymentTermLabel' => '14 Tage netto',
+                'paymentTermDuration' => 14
+            ],
+
+            // Lieferbedingungen (Termin)
+            'shippingConditions' => [
+                'shippingDate' => $appointment['appointment_date'] . 'T00:00:00.000+01:00', // Lexware-Format
+                'shippingType' => 'service'  // Service statt delivery
+            ],
+
+            // Texte
+            'title' => 'Rechnung',
+            'introduction' => sprintf(
+                'Rechnung für Ihre Buchung %s vom %s',
                 $bookingNumber,
-                $appointment['appointment_date'],
-                $appointment['appointment_time'],
-                $appointment['car_brand'] ?? '-',
-                $appointment['car_model'] ?? '-',
-                $appointment['car_year'] ?? '-',
-                $appointment['license_plate'] ?? '-'
+                date('d.m.Y')
             ),
-            'customerNote' => sprintf(
-                "Vielen Dank für Ihren Auftrag!\nBuchungsnummer: %s\nTermin: %s um %s Uhr",
-                $bookingNumber,
+            'remark' => sprintf(
+                "Vielen Dank für Ihren Auftrag!\n\nTermin: %s um %s Uhr\nBuchungsnummer: %s",
                 date('d.m.Y', strtotime($appointment['appointment_date'])),
-                $appointment['appointment_time']
+                $appointment['appointment_time'],
+                $bookingNumber
             )
         ];
+
+        // Optional: Rechnungsnummer setzen (wenn gewünscht)
+        // $invoice['voucherNumber'] = $bookingNumber;
 
         return $invoice;
     }
 
     /**
-     * Sende Rechnung an Lexware API
+     * Sende Rechnung an Lexware API - KORREKTER ENDPOINT!
      */
     private function sendToLexware($invoiceData)
     {
@@ -214,7 +230,7 @@ class LexwareAPI
             throw new Exception('Lexware API Key nicht konfiguriert');
         }
 
-        // API Request vorbereiten
+        // API Request vorbereiten - RICHTIGER ENDPOINT: /invoices
         $ch = curl_init($this->apiUrl . '/invoices');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -230,7 +246,14 @@ class LexwareAPI
         // Request ausführen
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
         curl_close($ch);
+
+        // Debug-Logging
+        if ($httpCode !== 201 && $httpCode !== 200) {
+            error_log("Lexware API Request: " . json_encode($invoiceData));
+            error_log("Lexware API Response ($httpCode): " . $response);
+        }
 
         // Response verarbeiten
         if ($httpCode === 201 || $httpCode === 200) {
@@ -238,25 +261,34 @@ class LexwareAPI
 
             return [
                 'success' => true,
-                'invoice_number' => $responseData['invoiceNumber'] ?? null,
                 'invoice_id' => $responseData['id'] ?? null,
-                'pdf_url' => $responseData['pdfUrl'] ?? null
+                'invoice_number' => $responseData['voucherNumber'] ?? null,
+                'resource_uri' => $responseData['resourceUri'] ?? null
             ];
         } else {
             error_log("Lexware API HTTP Error: {$httpCode} - Response: {$response}");
 
+            // Parse error response
+            $errorData = json_decode($response, true);
+            $errorMessage = "Lexware API Fehler (HTTP {$httpCode})";
+
+            if (isset($errorData['IssueList'])) {
+                $issues = array_column($errorData['IssueList'], 'source');
+                $errorMessage .= " - Felder: " . implode(', ', $issues);
+            }
+
             return [
                 'success' => false,
-                'error' => "Lexware API Fehler (HTTP {$httpCode})",
-                'details' => json_decode($response, true)
+                'error' => $errorMessage,
+                'details' => $errorData
             ];
         }
     }
 
     /**
-     * Update Appointment mit Lexware Rechnungsnummer
+     * Update Appointment mit Lexware Invoice ID
      */
-    private function updateAppointmentWithInvoice($appointmentId, $invoiceNumber)
+    private function updateAppointmentWithInvoice($appointmentId, $invoiceId)
     {
         $this->db->query("
             UPDATE appointments 
@@ -264,95 +296,104 @@ class LexwareAPI
                 invoice_number = ?,
                 invoice_created_at = CURRENT_TIMESTAMP
             WHERE id = ?
-        ", [$invoiceNumber, $appointmentId]);
+        ", [$invoiceId, $appointmentId]);
     }
 
     /**
-     * Hole oder erstelle Kundennummer für Lexware
-     */
-    private function getOrCreateCustomerNumber($appointment)
-    {
-        // Prüfe ob Kunde bereits eine Lexware Kundennummer hat
-        $existing = $this->db->fetch("
-            SELECT lexware_customer_number 
-            FROM customers 
-            WHERE id = ?
-        ", [$appointment['customer_id']]);
-
-        if ($existing && !empty($existing['lexware_customer_number'])) {
-            return $existing['lexware_customer_number'];
-        }
-
-        // Erstelle neue Kundennummer (Format: K-00001)
-        $lastNumber = $this->db->fetch("
-            SELECT MAX(CAST(SUBSTR(lexware_customer_number, 3) AS INTEGER)) as max_num
-            FROM customers
-            WHERE lexware_customer_number LIKE 'K-%'
-        ");
-
-        $newNumber = 'K-' . str_pad(($lastNumber['max_num'] ?? 0) + 1, 5, '0', STR_PAD_LEFT);
-
-        // Speichere Kundennummer
-        $this->db->query("
-            UPDATE customers 
-            SET lexware_customer_number = ?
-            WHERE id = ?
-        ", [$newNumber, $appointment['customer_id']]);
-
-        return $newNumber;
-    }
-
-    /**
-     * Hilfsfunktionen zum Extrahieren von Adressdaten
+     * Hilfsfunktion: Extrahiere Straße aus Adresse
      */
     private function extractStreet($address)
     {
-        // Extrahiere Straße und Hausnummer aus Adresse
-        preg_match('/^([^,\d]+\s*\d+[a-zA-Z]?)/', $address, $matches);
-        return $matches[1] ?? $address;
-    }
+        // Versuche Straße und Hausnummer zu extrahieren
+        // Format angenommen: Straße Hausnummer, PLZ Stadt
+        preg_match('/^([^,]+)/', $address, $matches);
+        $streetPart = trim($matches[1] ?? $address);
 
-    private function extractZip($address)
-    {
-        // Extrahiere PLZ aus Adresse
-        preg_match('/\b(\d{5})\b/', $address, $matches);
-        return $matches[1] ?? '';
-    }
-
-    private function extractCity($address)
-    {
-        // Extrahiere Stadt aus Adresse
-        preg_match('/\d{5}\s+(.+)$/', $address, $matches);
-        return trim($matches[1] ?? '');
-    }
-}
-
-// ========================================
-// API ENDPOINT HANDLER
-// ========================================
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    header('Content-Type: application/json');
-
-    try {
-        $data = json_decode(file_get_contents('php://input'), true);
-
-        if (!isset($data['appointment_id'])) {
-            throw new Exception('appointment_id fehlt');
+        // Entferne PLZ und Stadt falls vorhanden
+        preg_match('/^(.+?)\s+\d{5}/', $streetPart, $streetMatches);
+        if ($streetMatches) {
+            return trim($streetMatches[1]);
         }
 
-        $lexware = new LexwareAPI();
-        $result = $lexware->createInvoice(
-            $data['appointment_id'],
-            $data['payment_data'] ?? []
-        );
+        return $streetPart;
+    }
 
-        echo json_encode($result);
-    } catch (Exception $e) {
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'error' => $e->getMessage()
+    /**
+     * Hilfsfunktion: Extrahiere PLZ aus Adresse
+     */
+    private function extractZip($address)
+    {
+        // Versuche PLZ zu extrahieren (5-stellig in Deutschland)
+        preg_match('/\b(\d{5})\b/', $address, $matches);
+        return $matches[1] ?? '00000';
+    }
+
+    /**
+     * Hilfsfunktion: Extrahiere Stadt aus Adresse
+     */
+    private function extractCity($address)
+    {
+        // Versuche Stadt nach PLZ zu extrahieren
+        preg_match('/\d{5}\s+(.+?)(?:,|$)/', $address, $matches);
+        return trim($matches[1] ?? 'Unbekannt');
+    }
+
+    /**
+     * Hole Rechnung von Lexware
+     */
+    public function getInvoice($invoiceId)
+    {
+        if (empty($this->apiKey)) {
+            throw new Exception('Lexware API Key nicht konfiguriert');
+        }
+
+        $ch = curl_init($this->apiUrl . '/invoices/' . $invoiceId);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $this->apiKey,
+            'Accept: application/json'
         ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200) {
+            return json_decode($response, true);
+        }
+
+        return null;
+    }
+
+    /**
+     * Download Rechnung als PDF
+     */
+    public function downloadInvoicePdf($invoiceId)
+    {
+        if (empty($this->apiKey)) {
+            throw new Exception('Lexware API Key nicht konfiguriert');
+        }
+
+        // Render die Rechnung als PDF
+        $ch = curl_init($this->apiUrl . '/invoices/' . $invoiceId . '/document');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $this->apiKey,
+            'Accept: application/pdf'
+        ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $pdfContent = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200) {
+            return $pdfContent;
+        }
+
+        return null;
     }
 }
