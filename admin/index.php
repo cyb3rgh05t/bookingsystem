@@ -384,6 +384,7 @@ $recent = $db->fetchAll("
                     <li><a href="services.php"><i class="fa-solid fa-wrench"></i>Services</a></li>
                     <li><a href="calendar.php"><i class="fa-solid fa-calendar"></i>Kalender</a></li>
                     <li><a href="settings.php"><i class="fa-solid fa-gear"></i>Einstellungen</a></li>
+                    <li><a href="lexware-export.php"><i class="fa-solid fa-file-export"></i>Lexware Export</a></li>
                     <li><a href="../index.php" style="margin-top: 20px; border-top: 1px solid var(--clr-surface-a20); padding-top: 20px;"><i class="fa-solid fa-arrow-left"></i>Zum Termin Planner</a></li>
                     <li><a href="logout.php" style="color: var(--clr-error);"><i class="fa-solid fa-right-from-bracket"></i>Abmelden</a></li>
                 </ul>

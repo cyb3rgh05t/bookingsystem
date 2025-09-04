@@ -102,7 +102,8 @@ class LexwareAPI
     }
 
     /**
-     * Bereite Rechnungsdaten für Lexware API vor - NEUE STRUKTUR!
+     * Bereite Rechnungsdaten für Lexware API vor - FÜR UMSATZSTEUERBEFREITE UNTERNEHMEN!
+     * Verwendet distanceSales als taxSubType für mobile Dienstleistungen
      */
     private function prepareInvoiceData($appointment, $paymentData = [])
     {
@@ -112,7 +113,7 @@ class LexwareAPI
         // Bereite Line Items vor
         $lineItems = [];
 
-        // Services als Line Items
+        // Services als Line Items - OHNE STEUER (0%)!
         foreach ($appointment['services'] as $service) {
             $lineItems[] = [
                 'type' => 'custom',
@@ -122,8 +123,8 @@ class LexwareAPI
                 'unitName' => 'Stück',
                 'unitPrice' => [
                     'currency' => 'EUR',
-                    'netAmount' => round($service['price'] / 1.19, 2), // Netto-Betrag bei 19% MwSt
-                    'taxRatePercentage' => 19
+                    'netAmount' => $service['price'], // Preis direkt verwenden (ohne MwSt-Berechnung)
+                    'taxRatePercentage' => 0  // 0% Steuer für umsatzsteuerbefreite Unternehmen!
                 ],
                 'discountPercentage' => 0
             ];
@@ -139,8 +140,8 @@ class LexwareAPI
                 'unitName' => 'Pauschale',
                 'unitPrice' => [
                     'currency' => 'EUR',
-                    'netAmount' => round($appointment['travel_cost'] / 1.19, 2),
-                    'taxRatePercentage' => 19
+                    'netAmount' => $appointment['travel_cost'], // Preis direkt verwenden
+                    'taxRatePercentage' => 0  // 0% Steuer
                 ],
                 'discountPercentage' => 0
             ];
@@ -164,7 +165,8 @@ class LexwareAPI
         // Erstelle die Rechnung nach Lexware API Spezifikation
         $invoice = [
             'archived' => false,
-            'voucherDate' => date('c'), // ISO 8601 Format
+            'voucherStatus' => 'open',  // 'open' = unbezahlt, 'draft' = Entwurf, 'paid' = bezahlt
+            'voucherDate' => $this->getLexwareDateFormat(), // Verwende Helper-Funktion für korrektes Format
 
             // Adresse
             'address' => [
@@ -183,9 +185,10 @@ class LexwareAPI
                 'currency' => 'EUR'
             ],
 
-            // Steuerbedingungen
+            // Steuerbedingungen - FÜR UMSATZSTEUERBEFREITE UNTERNEHMEN!
             'taxConditions' => [
-                'taxType' => 'net'  // Netto-Rechnung
+                'taxType' => 'vatfree'  // vatfree für steuerbefreite Unternehmen
+                // KEIN taxSubType nötig bei vatfree!
             ],
 
             // Zahlungsbedingungen
@@ -196,8 +199,8 @@ class LexwareAPI
 
             // Lieferbedingungen (Termin)
             'shippingConditions' => [
-                'shippingDate' => $appointment['appointment_date'] . 'T00:00:00.000+01:00', // Lexware-Format
-                'shippingType' => 'service'  // Service statt delivery
+                'shippingDate' => $this->getLexwareDateFormat($appointment['appointment_date']),
+                'shippingType' => 'service'
             ],
 
             // Texte
@@ -207,31 +210,58 @@ class LexwareAPI
                 $bookingNumber,
                 date('d.m.Y')
             ),
+
+            // WICHTIG: Hinweis auf Steuerbefreiung im Remark!
             'remark' => sprintf(
-                "Vielen Dank für Ihren Auftrag!\n\nTermin: %s um %s Uhr\nBuchungsnummer: %s",
+                "Vielen Dank für Ihren Auftrag!\n\n" .
+                    "Termin: %s um %s Uhr\n" .
+                    "Buchungsnummer: %s\n\n" .
+                    "Hinweis: Gemäß §19 UStG wird keine Umsatzsteuer berechnet.",
                 date('d.m.Y', strtotime($appointment['appointment_date'])),
                 $appointment['appointment_time'],
                 $bookingNumber
             )
         ];
 
-        // Optional: Rechnungsnummer setzen (wenn gewünscht)
-        // $invoice['voucherNumber'] = $bookingNumber;
-
         return $invoice;
     }
 
     /**
-     * Sende Rechnung an Lexware API - KORREKTER ENDPOINT!
+     * Helper-Funktion für korrektes Lexware Datumsformat
+     * WICHTIG: Die .000 Millisekunden sind PFLICHT!
      */
-    private function sendToLexware($invoiceData)
+    private function getLexwareDateFormat($date = null)
+    {
+        if ($date === null) {
+            $date = new DateTime();
+        } elseif (is_string($date)) {
+            $date = new DateTime($date);
+        }
+
+        // Format: YYYY-MM-DDTHH:MM:SS.sss±HH:MM
+        // Die .000 für Millisekunden ist PFLICHT!
+        return $date->format('Y-m-d\T00:00:00.000+01:00');
+    }
+
+    /**
+     * Sende Rechnung an Lexware API
+     * @param array $invoiceData Die Rechnungsdaten
+     * @param bool $finalize Ob die Rechnung direkt finalisiert werden soll (true = open, false = draft)
+     */
+    private function sendToLexware($invoiceData, $finalize = true)
     {
         if (empty($this->apiKey)) {
             throw new Exception('Lexware API Key nicht konfiguriert');
         }
 
-        // API Request vorbereiten - RICHTIGER ENDPOINT: /invoices
-        $ch = curl_init($this->apiUrl . '/invoices');
+        // Füge Query-Parameter hinzu wenn Rechnung finalisiert werden soll
+        $endpoint = '/invoices';
+        if ($finalize) {
+            $endpoint .= '?finalize=true';  // Macht die Rechnung direkt zu "open" statt "draft"
+        }
+
+        // API Request vorbereiten
+        $ch = curl_init($this->apiUrl . $endpoint);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -263,7 +293,8 @@ class LexwareAPI
                 'success' => true,
                 'invoice_id' => $responseData['id'] ?? null,
                 'invoice_number' => $responseData['voucherNumber'] ?? null,
-                'resource_uri' => $responseData['resourceUri'] ?? null
+                'resource_uri' => $responseData['resourceUri'] ?? null,
+                'status' => $finalize ? 'open' : 'draft'
             ];
         } else {
             error_log("Lexware API HTTP Error: {$httpCode} - Response: {$response}");

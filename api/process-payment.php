@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * PayPal Payment Processing mit Lexware Integration
+ */
+
 ob_start();
 ob_clean();
 
@@ -30,6 +34,14 @@ try {
         throw new Exception('PayPal Credentials fehlen in Einstellungen');
     }
 
+    // PayPal Base URL
+    $baseUrl = $settings['paypal_mode'] === 'sandbox'
+        ? 'https://api-m.sandbox.paypal.com'
+        : 'https://api-m.paypal.com';
+
+    // ========================================
+    // CREATE ORDER
+    // ========================================
     if ($action === 'create_order') {
         $appointmentId = $_POST['appointment_id'] ?? null;
 
@@ -54,14 +66,7 @@ try {
         $debugInfo['appointment_found'] = true;
         $debugInfo['total_price'] = $appointment['total_price'];
 
-        // PayPal Access Token
-        $baseUrl = $settings['paypal_mode'] === 'sandbox'
-            ? 'https://api-m.sandbox.paypal.com'
-            : 'https://api-m.paypal.com';
-
-        $debugInfo['paypal_base_url'] = $baseUrl;
-
-        // Get Access Token
+        // Get PayPal Access Token
         $ch = curl_init($baseUrl . '/v1/oauth2/token');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
@@ -79,15 +84,7 @@ try {
         $curlError = curl_error($ch);
         curl_close($ch);
 
-        $debugInfo['token_http_code'] = $tokenHttpCode;
-
-        if ($curlError) {
-            $debugInfo['curl_error'] = $curlError;
-            throw new Exception('cURL Error: ' . $curlError);
-        }
-
         if ($tokenHttpCode !== 200) {
-            $debugInfo['token_response'] = $tokenResponse;
             throw new Exception('PayPal Auth fehlgeschlagen. HTTP Code: ' . $tokenHttpCode);
         }
 
@@ -97,8 +94,6 @@ try {
         if (!$accessToken) {
             throw new Exception('Access Token konnte nicht abgerufen werden');
         }
-
-        $debugInfo['token_received'] = true;
 
         // Erstelle Order
         $bookingNumber = date('Y') . '-' . str_pad($appointmentId, 4, '0', STR_PAD_LEFT);
@@ -124,8 +119,6 @@ try {
             ]
         ];
 
-        $debugInfo['order_data'] = $orderData;
-
         // Create Order API Call
         $ch = curl_init($baseUrl . '/v2/checkout/orders');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -142,46 +135,211 @@ try {
 
         $orderResponse = curl_exec($ch);
         $orderHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
         curl_close($ch);
 
-        $debugInfo['order_http_code'] = $orderHttpCode;
-
-        if ($curlError) {
-            $debugInfo['order_curl_error'] = $curlError;
-            throw new Exception('Order cURL Error: ' . $curlError);
-        }
-
         $orderData = json_decode($orderResponse, true);
-        $debugInfo['order_response'] = $orderData;
 
-        if ($orderHttpCode !== 201 && $orderHttpCode !== 200) {
-            $errorMessage = 'PayPal Order Creation Failed. HTTP: ' . $orderHttpCode;
-            if (isset($orderData['message'])) {
-                $errorMessage .= ' - ' . $orderData['message'];
-            }
-            if (isset($orderData['details'])) {
-                $debugInfo['error_details'] = $orderData['details'];
-            }
-            throw new Exception($errorMessage);
+        if ($orderHttpCode !== 201) {
+            throw new Exception('PayPal Order Creation Failed. HTTP: ' . $orderHttpCode);
         }
 
         if (!isset($orderData['id'])) {
             throw new Exception('Order ID nicht in PayPal Response');
         }
 
-        // Success!
+        // Speichere PayPal Order ID in DB
+        $db->query("
+            UPDATE appointments 
+            SET paypal_order_id = ?
+            WHERE id = ?
+        ", [$orderData['id'], $appointmentId]);
+
+        // Success
         ob_clean();
         echo json_encode([
             'success' => true,
-            'order_id' => $orderData['id'],
-            'approval_url' => $orderData['links'][1]['href'] ?? null,
-            'debug' => $DEBUG ? $debugInfo : null
+            'order_id' => $orderData['id']
         ]);
         exit;
     }
 
-    throw new Exception('Unbekannte Action: ' . $action);
+    // ========================================
+    // CAPTURE PAYMENT - Das fehlt bei dir!
+    // ========================================
+    elseif ($action === 'capture_payment') {
+        $orderId = $_POST['order_id'] ?? null;
+
+        if (!$orderId) {
+            throw new Exception('Order ID fehlt');
+        }
+
+        $debugInfo['order_id'] = $orderId;
+
+        // Hole Appointment basierend auf PayPal Order ID
+        $appointment = $db->fetch("
+            SELECT a.*, c.email, c.first_name, c.last_name
+            FROM appointments a
+            JOIN customers c ON a.customer_id = c.id
+            WHERE a.paypal_order_id = ?
+        ", [$orderId]);
+
+        if (!$appointment) {
+            throw new Exception('Buchung für Order ID ' . $orderId . ' nicht gefunden');
+        }
+
+        // Get PayPal Access Token
+        $ch = curl_init($baseUrl . '/v1/oauth2/token');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_USERPWD, $settings['paypal_client_id'] . ':' . $settings['paypal_client_secret']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Accept: application/json',
+            'Accept-Language: de_DE'
+        ]);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $tokenResponse = curl_exec($ch);
+        $tokenHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($tokenHttpCode !== 200) {
+            throw new Exception('PayPal Auth fehlgeschlagen');
+        }
+
+        $tokenData = json_decode($tokenResponse, true);
+        $accessToken = $tokenData['access_token'] ?? null;
+
+        if (!$accessToken) {
+            throw new Exception('Access Token konnte nicht abgerufen werden');
+        }
+
+        // Capture Payment
+        $ch = curl_init($baseUrl . '/v2/checkout/orders/' . $orderId . '/capture');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/json',
+            'Accept: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, '{}'); // Empty body für capture
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+
+        $captureResponse = curl_exec($ch);
+        $captureHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $captureData = json_decode($captureResponse, true);
+
+        if ($captureHttpCode !== 201 && $captureHttpCode !== 200) {
+            $errorMsg = 'PayPal Capture Failed. HTTP: ' . $captureHttpCode;
+            if (isset($captureData['details'][0]['description'])) {
+                $errorMsg .= ' - ' . $captureData['details'][0]['description'];
+            }
+            throw new Exception($errorMsg);
+        }
+
+        // Hole Capture ID
+        $captureId = null;
+        if (isset($captureData['purchase_units'][0]['payments']['captures'][0]['id'])) {
+            $captureId = $captureData['purchase_units'][0]['payments']['captures'][0]['id'];
+        }
+
+        // Update Appointment mit Payment Info
+        $db->query("
+            UPDATE appointments 
+            SET 
+                payment_status = 'paid',
+                payment_method = 'paypal',
+                payment_date = CURRENT_TIMESTAMP,
+                paypal_capture_id = ?
+            WHERE id = ?
+        ", [$captureId, $appointment['id']]);
+
+        // Speichere Payment History
+        $db->query("
+            INSERT INTO payment_history 
+            (appointment_id, payment_method, amount, currency, transaction_id, status, gateway_response)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ", [
+            $appointment['id'],
+            'paypal',
+            $appointment['total_price'],
+            'EUR',
+            $captureId,
+            'completed',
+            json_encode($captureData)
+        ]);
+
+        // ========================================
+        // LEXWARE RECHNUNG ERSTELLEN
+        // ========================================
+        $invoiceCreated = false;
+        $invoiceNumber = null;
+        $lexwareError = null;
+
+        if (!empty($settings['lexware_api_key'])) {
+            try {
+                // Prüfe ob Lexware API Datei existiert
+                $lexwareApiPath = __DIR__ . '/lexware-invoice.php';
+
+                if (file_exists($lexwareApiPath)) {
+                    require_once $lexwareApiPath;
+
+                    $lexwareApi = new LexwareAPI();
+
+                    // Erstelle Rechnung mit bezahlt Status
+                    $paymentData = [
+                        'payment_method' => 'paypal',
+                        'payment_status' => 'paid',
+                        'transaction_id' => $captureId,
+                        'payment_date' => date('Y-m-d H:i:s')
+                    ];
+
+                    $lexwareResponse = $lexwareApi->createInvoice($appointment['id'], $paymentData);
+
+                    if ($lexwareResponse['success']) {
+                        $invoiceCreated = true;
+                        $invoiceNumber = $lexwareResponse['invoice_number'];
+
+                        // Update appointment mit Rechnungsnummer
+                        if ($lexwareResponse['invoice_id']) {
+                            $db->query("
+                                UPDATE appointments 
+                                SET lexware_invoice_id = ?
+                                WHERE id = ?
+                            ", [$lexwareResponse['invoice_id'], $appointment['id']]);
+                        }
+                    } else {
+                        $lexwareError = $lexwareResponse['error'];
+                    }
+                }
+            } catch (Exception $e) {
+                $lexwareError = $e->getMessage();
+                // Fehler bei Lexware soll Zahlung nicht blockieren
+            }
+        }
+
+        // Success Response
+        ob_clean();
+        echo json_encode([
+            'success' => true,
+            'capture_id' => $captureId,
+            'payment_status' => 'paid',
+            'invoice_created' => $invoiceCreated,
+            'invoice_number' => $invoiceNumber,
+            'lexware_error' => $lexwareError
+        ]);
+        exit;
+    }
+
+    // Unbekannte Action
+    else {
+        throw new Exception('Unbekannte Action: ' . $action);
+    }
 } catch (Exception $e) {
     ob_clean();
 
