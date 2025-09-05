@@ -1,7 +1,8 @@
 <?php
 
 /**
- * PayPal Payment Processing mit Lexware Integration
+ * PayPal Payment Processing OHNE doppelte Lexware Rechnungserstellung
+ * Korrigierte Version - nutzt die bereits existierende Rechnung
  */
 
 ob_start();
@@ -164,7 +165,7 @@ try {
     }
 
     // ========================================
-    // CAPTURE PAYMENT - Das fehlt bei dir!
+    // CAPTURE PAYMENT - KORRIGIERT: Keine neue Rechnung!
     // ========================================
     elseif ($action === 'capture_payment') {
         $orderId = $_POST['order_id'] ?? null;
@@ -275,52 +276,31 @@ try {
         ]);
 
         // ========================================
-        // LEXWARE RECHNUNG ERSTELLEN
+        // WICHTIG: KEINE NEUE RECHNUNG ERSTELLEN!
+        // Nutze die bereits existierende Rechnung
         // ========================================
-        $invoiceCreated = false;
+
+        $invoiceExists = false;
         $invoiceNumber = null;
-        $lexwareError = null;
+        $lexwareMessage = null;
 
-        if (!empty($settings['lexware_api_key'])) {
-            try {
-                // Prüfe ob Lexware API Datei existiert
-                $lexwareApiPath = __DIR__ . '/lexware-invoice.php';
+        // Prüfe ob bereits eine Rechnung existiert
+        if (!empty($appointment['lexware_invoice_id'])) {
+            $invoiceExists = true;
+            $invoiceNumber = $appointment['invoice_number'];
+            $lexwareMessage = 'Existierende Rechnung verwendet';
 
-                if (file_exists($lexwareApiPath)) {
-                    require_once $lexwareApiPath;
+            error_log("✅ Zahlung erfasst für existierende Rechnung: " . $invoiceNumber);
 
-                    $lexwareApi = new LexwareAPI();
+            // Optional: Du könntest hier die Lexware API nutzen um den 
+            // Status der Rechnung auf "bezahlt" zu setzen, falls die API das unterstützt
+            // Aber KEINE neue Rechnung erstellen!
 
-                    // Erstelle Rechnung mit bezahlt Status
-                    $paymentData = [
-                        'payment_method' => 'paypal',
-                        'payment_status' => 'paid',
-                        'transaction_id' => $captureId,
-                        'payment_date' => date('Y-m-d H:i:s')
-                    ];
-
-                    $lexwareResponse = $lexwareApi->createInvoice($appointment['id'], $paymentData);
-
-                    if ($lexwareResponse['success']) {
-                        $invoiceCreated = true;
-                        $invoiceNumber = $lexwareResponse['invoice_number'];
-
-                        // Update appointment mit Rechnungsnummer
-                        if ($lexwareResponse['invoice_id']) {
-                            $db->query("
-                                UPDATE appointments 
-                                SET lexware_invoice_id = ?
-                                WHERE id = ?
-                            ", [$lexwareResponse['invoice_id'], $appointment['id']]);
-                        }
-                    } else {
-                        $lexwareError = $lexwareResponse['error'];
-                    }
-                }
-            } catch (Exception $e) {
-                $lexwareError = $e->getMessage();
-                // Fehler bei Lexware soll Zahlung nicht blockieren
-            }
+        } else {
+            // Falls aus irgendeinem Grund keine Rechnung existiert 
+            // (sollte nicht passieren, da bei Buchung erstellt wird)
+            $lexwareMessage = 'Keine Rechnung vorhanden (wurde bei Buchung erstellt?)';
+            error_log("⚠️ Warnung: Keine Lexware Rechnung für Appointment " . $appointment['id'] . " gefunden");
         }
 
         // Success Response
@@ -329,9 +309,9 @@ try {
             'success' => true,
             'capture_id' => $captureId,
             'payment_status' => 'paid',
-            'invoice_created' => $invoiceCreated,
+            'invoice_exists' => $invoiceExists,
             'invoice_number' => $invoiceNumber,
-            'lexware_error' => $lexwareError
+            'lexware_message' => $lexwareMessage
         ]);
         exit;
     }

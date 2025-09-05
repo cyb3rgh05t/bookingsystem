@@ -213,10 +213,11 @@ class LexwareAPI
 
             // WICHTIG: Hinweis auf Steuerbefreiung im Remark!
             'remark' => sprintf(
-                "Vielen Dank für Ihren Auftrag!\n\n" .
+                "Vielen Dank, dass Sie sich für MCS - Mobile Car Solution entschieden haben.\n" .
+                    "Wir freuen uns über ihre Google Bewertung - so helfen Sie uns stetig besser zu werden.\n\n" .
                     "Termin: %s um %s Uhr\n" .
                     "Buchungsnummer: %s\n\n" .
-                    "Hinweis: Gemäß §19 UStG wird keine Umsatzsteuer berechnet.",
+                    "Hinweis: Gemäß §19.1 UStG wird keine Umsatzsteuer berechnet.",
                 date('d.m.Y', strtotime($appointment['appointment_date'])),
                 $appointment['appointment_time'],
                 $bookingNumber
@@ -322,12 +323,12 @@ class LexwareAPI
     private function updateAppointmentWithInvoice($appointmentId, $invoiceId)
     {
         $this->db->query("
-            UPDATE appointments 
-            SET 
-                invoice_number = ?,
-                invoice_created_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ", [$invoiceId, $appointmentId]);
+        UPDATE appointments 
+        SET 
+            lexware_invoice_id = ?,
+            invoice_created_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    ", [$invoiceId, $appointmentId]);
     }
 
     /**

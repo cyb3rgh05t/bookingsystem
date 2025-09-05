@@ -1,10 +1,5 @@
 <?php
 
-/**
- * Admin Panel - Lexware Export
- * Datei: admin/lexware-export.php
- */
-
 session_start();
 require_once '../includes/config.php';
 require_once '../includes/db.php';
@@ -18,88 +13,43 @@ if (!isset($_SESSION['admin_id'])) {
 $db = Database::getInstance();
 $message = '';
 $messageType = '';
-$exportFile = '';
 
-// Handle Export-Request
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+// Handle Actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    if ($_POST['action'] === 'export_payments') {
-        $startDate = $_POST['start_date'] ?? date('Y-m-d', strtotime('-7 days'));
-        $endDate = $_POST['end_date'] ?? date('Y-m-d');
+    // Einzelne Zahlung als "in Lexware erledigt" markieren
+    if (isset($_POST['mark_done'])) {
+        $appointmentId = $_POST['appointment_id'];
 
-        // Hole alle bezahlten Rechnungen im Zeitraum
-        $payments = $db->fetchAll("
-            SELECT 
-                a.id,
-                a.lexware_invoice_id,
-                a.invoice_number,
-                a.total_price,
-                a.payment_date,
-                a.payment_method,
-                a.paypal_capture_id,
-                c.first_name,
-                c.last_name,
-                c.email,
-                c.company,
-                c.lexware_customer_number
-            FROM appointments a
-            JOIN customers c ON a.customer_id = c.id
-            WHERE DATE(a.payment_date) BETWEEN ? AND ?
-            AND a.payment_status = 'paid'
-            AND a.lexware_invoice_id IS NOT NULL
-            ORDER BY a.payment_date DESC
-        ", [$startDate, $endDate]);
+        // Setze lexware_export_date = jetzt (bedeutet: "Ich habe das in Lexware gemacht")
+        $db->query("
+            UPDATE appointments 
+            SET lexware_export_date = CURRENT_TIMESTAMP
+            WHERE id = ? 
+            AND payment_status = 'paid'
+        ", [$appointmentId]);
 
-        if (count($payments) > 0) {
-            // Erstelle CSV
-            $csvData = [];
+        $message = '✅ Als in Lexware erledigt markiert';
+        $messageType = 'success';
+    }
 
-            // Header für Lexware Buchhaltung
-            $csvData[] = [
-                'Rechnungsnummer',
-                'Kundennummer',
-                'Kundenname',
-                'Betrag (EUR)',
-                'Zahlungsdatum',
-                'Zahlungsart',
-                'Verwendungszweck',
-                'Lexware Invoice ID'
-            ];
+    // Mehrere als erledigt markieren
+    if (isset($_POST['mark_selected'])) {
+        $selected = $_POST['selected_appointments'] ?? [];
 
-            foreach ($payments as $payment) {
-                $csvData[] = [
-                    $payment['invoice_number'] ?: 'RE-' . date('Y-m', strtotime($payment['payment_date'])) . '-' . str_pad($payment['id'], 4, '0', STR_PAD_LEFT),
-                    $payment['lexware_customer_number'] ?: 'KD-' . str_pad($payment['id'], 5, '0', STR_PAD_LEFT),
-                    $payment['first_name'] . ' ' . $payment['last_name'] . ($payment['company'] ? ' (' . $payment['company'] . ')' : ''),
-                    number_format($payment['total_price'], 2, '.', ''),
-                    date('d.m.Y', strtotime($payment['payment_date'])),
-                    $payment['payment_method'] === 'paypal' ? 'PayPal' : 'Überweisung',
-                    'Buchung #' . str_pad($payment['id'], 4, '0', STR_PAD_LEFT) . ($payment['paypal_capture_id'] ? ' / PayPal: ' . $payment['paypal_capture_id'] : ''),
-                    $payment['lexware_invoice_id']
-                ];
-            }
+        if (count($selected) > 0) {
+            $placeholders = str_repeat('?,', count($selected) - 1) . '?';
+            $db->query("
+                UPDATE appointments 
+                SET lexware_export_date = CURRENT_TIMESTAMP
+                WHERE id IN ($placeholders)
+                AND payment_status = 'paid'
+            ", $selected);
 
-            // Speichere CSV
-            $exportDir = '../exports/';
-            if (!is_dir($exportDir)) {
-                mkdir($exportDir, 0755, true);
-            }
-
-            $filename = 'lexware_zahlungen_' . date('Y-m-d_His') . '.csv';
-            $filepath = $exportDir . $filename;
-
-            $fp = fopen($filepath, 'w');
-            fprintf($fp, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM für Excel/Lexware
-            foreach ($csvData as $row) {
-                fputcsv($fp, $row, ';'); // Semikolon für deutsche Excel/Lexware
-            }
-            fclose($fp);
-
-            $exportFile = $filename;
-            $message = 'Export erfolgreich! ' . count($payments) . ' Zahlungen exportiert.';
+            $message = '✅ ' . count($selected) . ' Zahlungen als erledigt markiert';
             $messageType = 'success';
         } else {
-            $message = 'Keine bezahlten Rechnungen im gewählten Zeitraum gefunden.';
+            $message = '⚠️ Keine Zahlungen ausgewählt';
             $messageType = 'warning';
         }
     }
@@ -108,30 +58,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // Statistiken laden
 $stats = $db->fetch("
     SELECT 
-        COUNT(CASE WHEN payment_status = 'paid' AND lexware_invoice_id IS NOT NULL THEN 1 END) as paid_with_invoice,
-        COUNT(CASE WHEN payment_status = 'paid' AND lexware_invoice_id IS NULL THEN 1 END) as paid_without_invoice,
-        COUNT(CASE WHEN payment_status = 'paid' AND lexware_export_date IS NULL AND lexware_invoice_id IS NOT NULL THEN 1 END) as pending_export,
+        COUNT(CASE WHEN payment_status = 'paid' AND lexware_invoice_id IS NOT NULL AND lexware_export_date IS NULL THEN 1 END) as pending_export,
+        COUNT(CASE WHEN payment_status = 'paid' AND lexware_invoice_id IS NOT NULL AND lexware_export_date IS NOT NULL THEN 1 END) as done_export,
         COUNT(CASE WHEN payment_status = 'paid' AND DATE(payment_date) = DATE('now') THEN 1 END) as paid_today,
         SUM(CASE WHEN payment_status = 'paid' AND lexware_export_date IS NULL THEN total_price ELSE 0 END) as pending_amount
     FROM appointments
 ");
 
-// Letzte bezahlte Rechnungen für Vorschau
+// Lade "To-Do" Zahlungen (bezahlt, aber noch nicht in Lexware erledigt)
 $pendingPayments = $db->fetchAll("
     SELECT 
         a.id,
+        a.lexware_invoice_id,
         a.invoice_number,
         a.total_price,
         a.payment_date,
+        a.payment_method,
+        a.paypal_capture_id,
         c.first_name,
-        c.last_name
+        c.last_name,
+        c.email,
+        c.phone
     FROM appointments a
     JOIN customers c ON a.customer_id = c.id
     WHERE a.payment_status = 'paid'
     AND a.lexware_invoice_id IS NOT NULL
-    AND (a.lexware_export_date IS NULL OR DATE(a.payment_date) = DATE('now'))
+    AND a.lexware_export_date IS NULL
     ORDER BY a.payment_date DESC
-    LIMIT 10
 ");
 ?>
 <!DOCTYPE html>
@@ -446,6 +399,11 @@ $pendingPayments = $db->fetchAll("
             background-color: #16a34a;
         }
 
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
         /* Table */
         .table-responsive {
             overflow-x: auto;
@@ -493,6 +451,84 @@ $pendingPayments = $db->fetchAll("
 
         .download-link:hover {
             background: var(--clr-primary-a10);
+        }
+
+        /* Zusätzliche Styles für Workflow */
+        .workflow-banner {
+            background: linear-gradient(135deg, var(--clr-surface-a10) 0%, var(--clr-surface-tonal-a10) 100%);
+            border: 1px solid var(--clr-surface-a20);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .workflow-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .workflow-step {
+            background: var(--clr-surface-a05);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--clr-surface-a20);
+        }
+
+        .workflow-step.active {
+            background: var(--clr-surface-tonal-a10);
+            border: 2px solid var(--clr-primary-a0);
+        }
+
+        .workflow-step i {
+            font-size: 1.5rem;
+            color: var(--clr-primary-a20);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .bulk-actions {
+            background: var(--clr-surface-a05);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border: 1px solid var(--clr-surface-a20);
+        }
+
+        .payment-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .payment-paypal {
+            background: rgba(0, 48, 135, 0.1);
+            color: #003087;
+            border: 1px solid rgba(0, 48, 135, 0.2);
+        }
+
+        .payment-bank {
+            background: rgba(74, 222, 128, 0.1);
+            color: var(--clr-success);
+            border: 1px solid rgba(74, 222, 128, 0.2);
+        }
+
+        .lexware-id {
+            font-family: monospace;
+            font-size: 0.875rem;
+            background: var(--clr-surface-a05);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: var(--clr-primary-a20);
         }
 
         /* Mobile Responsive */
@@ -551,6 +587,10 @@ $pendingPayments = $db->fetchAll("
             .date-range {
                 flex-direction: column;
             }
+
+            .workflow-steps {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -583,153 +623,197 @@ $pendingPayments = $db->fetchAll("
             <div class="page-header">
                 <div>
                     <h1><i class="fa-solid fa-file-export"></i> Lexware Export</h1>
-                    <p style="color: var(--clr-surface-a50);">Zahlungen für Lexware Buchhaltung exportieren</p>
+                    <p style="color: var(--clr-surface-a50);">Manueller Workflow für Lexware Zahlungen</p>
                 </div>
             </div>
 
             <?php if ($message): ?>
                 <div class="alert alert-<?php echo $messageType; ?>">
                     <?php echo htmlspecialchars($message); ?>
-
-                    <?php if ($exportFile): ?>
-                        <a href="../exports/<?php echo $exportFile; ?>"
-                            download
-                            class="download-link">
-                            <i class="fas fa-download"></i> CSV herunterladen
-                        </a>
-                    <?php endif; ?>
                 </div>
             <?php endif; ?>
+
+            <!-- Workflow Erklärung -->
+            <div class="workflow-banner">
+                <h2 style="color: var(--clr-primary-a20); margin-bottom: 20px;"><i class="fas fa-route"></i> Dein Workflow</h2>
+                <div class="workflow-steps">
+                    <div class="workflow-step">
+                        <i class="fas fa-calendar-check"></i>
+                        <div><strong>1. Kunde bucht</strong><br>Termin wird erstellt</div>
+                    </div>
+                    <div class="workflow-step">
+                        <i class="fas fa-file-invoice"></i>
+                        <div><strong>2. Rechnung erstellt</strong><br>Automatisch in Lexware</div>
+                    </div>
+                    <div class="workflow-step">
+                        <i class="fas fa-credit-card"></i>
+                        <div><strong>3. Kunde zahlt</strong><br>PayPal/Überweisung</div>
+                    </div>
+                    <div class="workflow-step active">
+                        <i class="fas fa-hand-pointer"></i>
+                        <div><strong>4. Du markierst</strong><br>Manuell in Lexware</div>
+                    </div>
+                    <div class="workflow-step">
+                        <i class="fas fa-check-double"></i>
+                        <div><strong>5. Bestätigen</strong><br>Hier als erledigt</div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Statistiken -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <h4>Nicht exportiert</h4>
+                    <h4>To-Do in Lexware</h4>
                     <div class="stat-value"><?php echo $stats['pending_export'] ?? 0; ?></div>
-                    <p>Ausstehende Zahlungen</p>
+                    <p>Manuell zu markieren</p>
                 </div>
                 <div class="stat-card">
-                    <h4>Ausstehender Betrag</h4>
+                    <h4>Erledigt</h4>
+                    <div class="stat-value"><?php echo $stats['done_export'] ?? 0; ?></div>
+                    <p>Bereits abgeschlossen</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Offener Betrag</h4>
                     <div class="stat-value"><?php echo number_format($stats['pending_amount'] ?? 0, 2, ',', '.'); ?> €</div>
-                    <p>Zu exportieren</p>
+                    <p>Zu bearbeiten</p>
                 </div>
                 <div class="stat-card">
                     <h4>Heute bezahlt</h4>
                     <div class="stat-value"><?php echo $stats['paid_today'] ?? 0; ?></div>
-                    <p>Zahlungen</p>
-                </div>
-                <div class="stat-card">
-                    <h4>Mit Rechnung</h4>
-                    <div class="stat-value"><?php echo $stats['paid_with_invoice'] ?? 0; ?></div>
-                    <p>Gesamt</p>
+                    <p>Neue Zahlungen</p>
                 </div>
             </div>
 
-            <!-- Export Form -->
+            <!-- To-Do Liste -->
             <div class="card">
-                <h2><i class="fas fa-calendar-alt"></i> Zahlungen exportieren</h2>
-
-                <form method="POST">
-                    <input type="hidden" name="action" value="export_payments">
-
-                    <div class="date-range">
-                        <div class="form-group">
-                            <label class="form-label" for="start_date">Von:</label>
-                            <input type="date"
-                                id="start_date"
-                                name="start_date"
-                                value="<?php echo date('Y-m-d', strtotime('-7 days')); ?>"
-                                class="form-control">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="end_date">Bis:</label>
-                            <input type="date"
-                                id="end_date"
-                                name="end_date"
-                                value="<?php echo date('Y-m-d'); ?>"
-                                class="form-control">
-                        </div>
-
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-file-csv"></i>
-                            CSV Export erstellen
-                        </button>
-                    </div>
-
-                    <div style="margin-top: 10px; color: var(--clr-surface-a50);">
-                        <small>
-                            <i class="fas fa-info-circle"></i>
-                            Exportiert alle bezahlten Rechnungen im gewählten Zeitraum als CSV für Lexware.
-                        </small>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Vorschau der ausstehenden Zahlungen -->
-            <div class="card">
-                <h2><i class="fas fa-clock"></i> Ausstehende Zahlungen (Vorschau)</h2>
+                <h2><i class="fas fa-clipboard-list"></i> Zahlungen zum Bearbeiten in Lexware</h2>
+                <p style="color: var(--clr-surface-a50); margin-bottom: 20px;">
+                    Diese Zahlungen sind eingegangen und müssen manuell in Lexware als bezahlt markiert werden.
+                </p>
 
                 <?php if (count($pendingPayments) > 0): ?>
-                    <div class="table-responsive">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Rechnungsnr.</th>
-                                    <th>Kunde</th>
-                                    <th>Betrag</th>
-                                    <th>Zahlungsdatum</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($pendingPayments as $payment): ?>
+                    <form method="POST">
+                        <div class="bulk-actions">
+                            <input type="checkbox" id="select-all">
+                            <label for="select-all"><strong>Alle auswählen</strong></label>
+                            <button type="submit" name="mark_selected" class="btn btn-success">
+                                <i class="fas fa-check-double"></i> Ausgewählte als erledigt markieren
+                            </button>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="admin-table">
+                                <thead>
                                     <tr>
-                                        <td><?php echo $payment['invoice_number'] ?: 'RE-' . str_pad($payment['id'], 4, '0', STR_PAD_LEFT); ?></td>
-                                        <td><?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name']); ?></td>
-                                        <td><?php echo number_format($payment['total_price'], 2, ',', '.'); ?> €</td>
-                                        <td><?php echo date('d.m.Y H:i', strtotime($payment['payment_date'])); ?></td>
+                                        <th style="width: 40px;">
+                                            <i class="fas fa-check-square"></i>
+                                        </th>
+                                        <th>Datum</th>
+                                        <th>Kunde</th>
+                                        <th>Betrag</th>
+                                        <th>Zahlungsart</th>
+                                        <th>Lexware ID</th>
+                                        <th>Aktion</th>
                                     </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($pendingPayments as $payment): ?>
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox"
+                                                    name="selected_appointments[]"
+                                                    value="<?php echo $payment['id']; ?>"
+                                                    class="payment-checkbox">
+                                            </td>
+                                            <td>
+                                                <strong><?php echo date('d.m.Y', strtotime($payment['payment_date'])); ?></strong><br>
+                                                <small style="color: var(--clr-surface-a50);">
+                                                    <?php echo date('H:i', strtotime($payment['payment_date'])); ?> Uhr
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div style="font-weight: 600;"><?php echo htmlspecialchars($payment['first_name'] . ' ' . $payment['last_name']); ?></div>
+                                                <div style="font-size: 0.875rem; color: var(--clr-surface-a50);"><?php echo htmlspecialchars($payment['email']); ?></div>
+                                            </td>
+                                            <td>
+                                                <strong style="color: var(--clr-success);">
+                                                    <?php echo number_format($payment['total_price'], 2, ',', '.'); ?> €
+                                                </strong>
+                                            </td>
+                                            <td>
+                                                <?php if ($payment['payment_method'] === 'paypal'): ?>
+                                                    <span class="payment-badge payment-paypal">
+                                                        <i class="fab fa-paypal"></i> PayPal
+                                                    </span>
+                                                    <?php if ($payment['paypal_capture_id']): ?>
+                                                        <br><small style="color: var(--clr-surface-a50); font-size: 0.75rem;">
+                                                            <?php echo substr($payment['paypal_capture_id'], 0, 8); ?>...
+                                                        </small>
+                                                    <?php endif; ?>
+                                                <?php else: ?>
+                                                    <span class="payment-badge payment-bank">
+                                                        <i class="fas fa-university"></i> Überweisung
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <code class="lexware-id"><?php echo htmlspecialchars($payment['lexware_invoice_id']); ?></code>
+                                            </td>
+                                            <td>
+                                                <form method="POST" style="display: inline;">
+                                                    <input type="hidden" name="appointment_id" value="<?php echo $payment['id']; ?>">
+                                                    <button type="submit" name="mark_done" class="btn btn-success btn-sm"
+                                                        title="Als in Lexware erledigt markieren">
+                                                        <i class="fas fa-check"></i> Erledigt
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </form>
                 <?php else: ?>
                     <p style="text-align: center; padding: 2rem; color: var(--clr-surface-a40);">
-                        Keine ausstehenden Zahlungen zum Export.
+                        <i class="fas fa-check-circle" style="font-size: 3rem; color: var(--clr-success); display: block; margin-bottom: 10px;"></i>
+                        Alles erledigt! Keine offenen Zahlungen zum Bearbeiten in Lexware.
                     </p>
                 <?php endif; ?>
             </div>
 
             <!-- Anleitung -->
             <div class="card">
-                <h2><i class="fas fa-question-circle"></i> Anleitung für Lexware Import</h2>
-                <ol style="line-height: 1.8; color: var(--clr-surface-a60);">
-                    <li>Wählen Sie den gewünschten Zeitraum und klicken Sie auf "CSV Export erstellen"</li>
-                    <li>Laden Sie die CSV-Datei herunter</li>
-                    <li>Öffnen Sie Lexware Buchhaltung</li>
-                    <li>Gehen Sie zu <strong style="color: var(--clr-primary-a30);">Datei → Import → Zahlungen</strong></li>
-                    <li>Wählen Sie die heruntergeladene CSV-Datei</li>
-                    <li>Folgen Sie dem Import-Assistenten</li>
-                    <li>Die Zahlungen werden automatisch den Rechnungen zugeordnet</li>
+                <h2><i class="fas fa-question-circle"></i> So funktioniert's:</h2>
+                <ol style="line-height: 1.8; color: var(--clr-surface-a60); padding-left: 20px;">
+                    <li><strong style="color: var(--clr-primary-a30);">Öffne Lexware</strong> und suche die Rechnung mit der angezeigten Lexware ID</li>
+                    <li><strong style="color: var(--clr-primary-a30);">Markiere die Rechnung als bezahlt</strong> in Lexware (manuell)</li>
+                    <li><strong style="color: var(--clr-primary-a30);">Klicke hier auf "Erledigt"</strong> um die Zahlung aus dieser Liste zu entfernen</li>
+                    <li>Optional: Wähle mehrere Zahlungen aus und markiere sie gleichzeitig als erledigt</li>
                 </ol>
 
                 <div class="alert alert-info" style="margin-top: 20px;">
-                    <strong>💡 Tipp:</strong> Exportieren Sie täglich oder wöchentlich, um die Buchhaltung aktuell zu halten.
+                    <strong>💡 Tipp:</strong> Die Lexware API unterstützt leider keine automatische Status-Änderung.
+                    Dieser manuelle Workflow stellt sicher, dass deine Buchhaltung synchron bleibt.
                 </div>
             </div>
         </main>
     </div>
 
     <script>
-        // Auto-Download wenn Export erfolgreich
-        document.addEventListener('DOMContentLoaded', function() {
-            const downloadLink = document.querySelector('.download-link');
-            if (downloadLink) {
-                // Optional: Auto-Download nach 2 Sekunden
-                setTimeout(() => {
-                    downloadLink.click();
-                }, 2000);
-            }
+        // Select All Checkbox
+        document.getElementById('select-all')?.addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.payment-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+        });
+
+        // Update select-all wenn einzelne Checkboxen geändert werden
+        document.querySelectorAll('.payment-checkbox').forEach(cb => {
+            cb.addEventListener('change', function() {
+                const total = document.querySelectorAll('.payment-checkbox').length;
+                const checked = document.querySelectorAll('.payment-checkbox:checked').length;
+                document.getElementById('select-all').checked = (total === checked);
+            });
         });
     </script>
 </body>
