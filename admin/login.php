@@ -30,45 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Booking System</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/theme.css">
     <style>
-        /* CSS Custom Properties - Einheitliches Farbschema */
-        :root {
-            /* Base colors */
-            --clr-dark-a0: #000000;
-            --clr-light-a0: #ffffff;
-
-            /* Theme primary colors */
-            --clr-primary-a0: #e6a309;
-            --clr-primary-a10: #ebad36;
-            --clr-primary-a20: #f0b753;
-            --clr-primary-a30: #f4c16c;
-            --clr-primary-a40: #f8cb85;
-            --clr-primary-a50: #fbd59d;
-
-            /* Theme surface colors */
-            --clr-surface-a0: #141414;
-            --clr-surface-a05: #1f1f1f;
-            --clr-surface-a10: #292929;
-            --clr-surface-a20: #404040;
-            --clr-surface-a30: #585858;
-            --clr-surface-a40: #727272;
-            --clr-surface-a50: #8c8c8c;
-            --clr-surface-a60: #a6a6a6;
-
-            /* Theme tonal surface colors */
-            --clr-surface-tonal-a0: #272017;
-            --clr-surface-tonal-a10: #3c352c;
-            --clr-surface-tonal-a20: #514b43;
-            --clr-surface-tonal-a30: #68625b;
-            --clr-surface-tonal-a40: #7f7a74;
-            --clr-surface-tonal-a50: #98938e;
-
-            /* Border radius */
-            --radius-sm: 6px;
-            --radius-md: 8px;
-            --radius-lg: 12px;
-        }
-
         /* Reset & Base Styles */
         * {
             margin: 0;
