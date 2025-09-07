@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 require_once '../includes/config.php';
 require_once '../includes/db.php';
@@ -68,6 +67,25 @@ $blocked = $db->fetchAll("
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/theme.css">
     <link rel="stylesheet" href="../assets/css/admin.css">
+
+    <style>
+        /* Zusätzliches CSS für klickbare Kalender-Zellen */
+        .calendar-cell.has-appointments {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .calendar-cell.has-appointments:hover {
+            background: var(--clr-surface-a15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .appointment-count {
+            pointer-events: none;
+            /* Verhindert, dass der Badge den Click abfängt */
+        }
+    </style>
 </head>
 
 <body>
@@ -144,7 +162,17 @@ $blocked = $db->fetchAll("
                         }
                     }
 
-                    echo '<div class="calendar-cell">';
+                    // Klasse hinzufügen wenn Termine vorhanden
+                    $cellClass = 'calendar-cell';
+                    if ($hasAppointments) {
+                        $cellClass .= ' has-appointments';
+                    }
+
+                    // onClick Event nur wenn Termine vorhanden
+                    $onClick = $hasAppointments ? "onclick=\"window.location.href='appointments.php?date={$dateStr}'\"" : "";
+                    $title = $hasAppointments ? "title=\"Klicken um Termine anzuzeigen\"" : "";
+
+                    echo "<div class=\"{$cellClass}\" {$onClick} {$title}>";
                     echo '<div class="day-number">' . $day . '</div>';
 
                     if ($hasAppointments) {
@@ -173,105 +201,97 @@ $blocked = $db->fetchAll("
 
                         <div class="form-group">
                             <label class="form-label">Grund</label>
-                            <input type="text" name="reason" class="form-control" placeholder="z.B. Urlaub, Krankheit">
+                            <input type="text" name="reason" class="form-control" placeholder="z.B. Urlaub, Werkstatt geschlossen">
                         </div>
+                    </div>
 
+                    <div class="grid grid-2">
                         <div class="form-group">
-                            <label class="form-label">
-                                <input type="checkbox" name="is_full_day" value="1" onchange="toggleTimeInputs(this)">
-                                Ganzer Tag
-                            </label>
-                        </div>
-
-                        <div></div>
-
-                        <div class="form-group" id="time-inputs">
-                            <label class="form-label">Von</label>
+                            <label class="form-label">Start-Zeit (optional)</label>
                             <input type="time" name="start_time" class="form-control">
                         </div>
 
-                        <div class="form-group" id="time-inputs-2">
-                            <label class="form-label">Bis</label>
+                        <div class="form-group">
+                            <label class="form-label">End-Zeit (optional)</label>
                             <input type="time" name="end_time" class="form-control">
                         </div>
                     </div>
 
-                    <button type="submit" name="block_date" class="btn btn-warning">Zeit blockieren</button>
+                    <div class="form-group">
+                        <label class="form-check">
+                            <input type="checkbox" name="is_full_day" value="1">
+                            <span>Ganzer Tag blockieren</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" name="block_date" class="btn btn-primary">Zeit blockieren</button>
                 </form>
             </div>
 
             <!-- Blocked Times List -->
-            <div class="card">
-                <h3 style="margin-bottom: 1.5rem;">Blockierte Zeiten</h3>
+            <?php if (!empty($blocked)): ?>
+                <div class="card">
+                    <h3 style="margin-bottom: 1.5rem;">Blockierte Zeiten</h3>
 
-                <div class="table-responsive">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Datum</th>
-                                <th>Zeit</th>
-                                <th>Grund</th>
-                                <th>Aktionen</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($blocked as $block): ?>
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <?php echo date('d.m.Y', strtotime($block['date'])); ?>
-                                    </td>
-                                    <td>
-                                        <?php
-                                        if ($block['is_full_day']) {
-                                            echo 'Ganzer Tag';
-                                        } else {
-                                            echo $block['start_time'] . ' - ' . $block['end_time'];
-                                        }
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <?php echo htmlspecialchars($block['reason'] ?: '-'); ?>
-                                    </td>
-                                    <td>
-                                        <form method="POST" style="display: inline;">
-                                            <input type="hidden" name="block_id" value="<?php echo $block['id']; ?>">
-                                            <button type="submit" name="unblock" class="btn btn-danger btn-sm">
-                                                Aufheben
-                                            </button>
-                                        </form>
-                                    </td>
+                                    <th>Datum</th>
+                                    <th>Zeit</th>
+                                    <th>Grund</th>
+                                    <th>Aktionen</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($blocked as $block): ?>
+                                    <tr>
+                                        <td><?php echo date('d.m.Y', strtotime($block['date'])); ?></td>
+                                        <td>
+                                            <?php if ($block['is_full_day']): ?>
+                                                Ganzer Tag
+                                            <?php elseif ($block['start_time'] && $block['end_time']): ?>
+                                                <?php echo substr($block['start_time'], 0, 5); ?> - <?php echo substr($block['end_time'], 0, 5); ?>
+                                            <?php else: ?>
+                                                -
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?php echo htmlspecialchars($block['reason'] ?: '-'); ?></td>
+                                        <td>
+                                            <form method="POST" style="display: inline;">
+                                                <input type="hidden" name="block_id" value="<?php echo $block['id']; ?>">
+                                                <button type="submit" name="unblock" class="btn btn-small"
+                                                    onclick="return confirm('Blockierung aufheben?')">
+                                                    Aufheben
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-
-                <?php if (empty($blocked)): ?>
-                    <p style="text-align: center; padding: 2rem; color: var(--clr-surface-a40);">
-                        Keine blockierten Zeiten vorhanden.
-                    </p>
-                <?php endif; ?>
-            </div>
+            <?php endif; ?>
         </main>
     </div>
 
     <script>
-        function toggleTimeInputs(checkbox) {
-            const timeInputs = document.getElementById('time-inputs');
-            const timeInputs2 = document.getElementById('time-inputs-2');
+        // Ganzer Tag checkbox handling
+        document.querySelector('input[name="is_full_day"]')?.addEventListener('change', function() {
+            const startTime = document.querySelector('input[name="start_time"]');
+            const endTime = document.querySelector('input[name="end_time"]');
 
-            if (checkbox.checked) {
-                timeInputs.style.display = 'none';
-                timeInputs2.style.display = 'none';
-                timeInputs.querySelector('input').required = false;
-                timeInputs2.querySelector('input').required = false;
+            if (this.checked) {
+                startTime.disabled = true;
+                endTime.disabled = true;
+                startTime.value = '';
+                endTime.value = '';
             } else {
-                timeInputs.style.display = 'block';
-                timeInputs2.style.display = 'block';
-                timeInputs.querySelector('input').required = true;
-                timeInputs2.querySelector('input').required = true;
+                startTime.disabled = false;
+                endTime.disabled = false;
             }
-        }
+        });
     </script>
 </body>
 

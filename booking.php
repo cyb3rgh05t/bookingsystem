@@ -423,19 +423,8 @@ $settings = $db->fetch("SELECT * FROM settings WHERE id = 1");
             };
         </script>
     <?php endif; ?>
-
     <script src="assets/js/booking.js"></script>
-    <!-- HINZUFÜGEN: Payment Integration Scripts -->
-
-
-    <!-- PayPal SDK wird dynamisch geladen wenn benötigt -->
     <script src="assets/js/payment.js"></script>
-
-    <!-- Appointment ID für Payment verfügbar machen -->
-    <script>
-        // Globale Variable für Payment Integration
-        // let currentAppointmentId = null;
-    </script>
 </body>
 
 </html>
